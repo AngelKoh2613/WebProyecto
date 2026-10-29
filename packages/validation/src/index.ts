@@ -52,3 +52,7 @@ export const serviceReportSyncResponseSchema = serviceReportRecordSchema.extend(
     outcome: z.enum(["created", "existing"]),
   },
 );
+
+export const serviceReportListSchema = z.object({
+  reports: z.array(serviceReportRecordSchema),
+});

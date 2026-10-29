@@ -27,11 +27,13 @@ export function App() {
       if (document.visibilityState === "visible") probe();
     };
     window.addEventListener("online", onOnline);
+    window.addEventListener("pageshow", onOnline);
     document.addEventListener("visibilitychange", onVisible);
 
     return () => {
       controller.abort();
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("pageshow", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, []);

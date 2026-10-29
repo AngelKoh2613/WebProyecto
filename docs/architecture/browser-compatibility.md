@@ -20,7 +20,7 @@ La columna Evidencia indica la fuente consultada o la comprobación local. El co
 
 MDN documenta que un Service Worker solo está disponible en un contexto seguro. HTTPS es el caso general. Los navegadores tratan `http://localhost` como contexto seguro para facilitar el desarrollo. MDN también advierte que una conexión HTTP permitiría inyectar código con más daño si pudiera registrar un Service Worker.
 
-El manifiesto instalable, según MDN, exige HTTPS o un entorno local en `localhost` o `127.0.0.1`. El despliegue previsto en Render termina TLS en la plataforma y redirige HTTP a HTTPS. Ese despliegue no se ha ejecutado.
+El manifiesto instalable, según MDN, exige HTTPS o un entorno local en `localhost` o `127.0.0.1`. Render termina TLS en `https://webproyecto.onrender.com`. Esa URL respondió el 2026-10-29. La instalación en un teléfono no se ha ejecutado.
 
 ## IndexedDB y persistencia
 

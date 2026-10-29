@@ -6,7 +6,7 @@ PWA académica para que un técnico de campo registre y consulte reportes de ser
 
 El problema es la pérdida de conectividad durante el trabajo en campo: un reporte que solo existe en un formulario en línea no se puede guardar ni revisar cuando la red desaparece. La aplicación prevista combina una interfaz instalable, una copia local y una API que confirma los reportes en PostgreSQL cuando la conexión vuelve.
 
-Esta versión guarda el reporte en el dispositivo, lo sincroniza con PostgreSQL cuando la API responde y puede servirse como un solo proceso: Fastify entrega la API y el build de React. Hay manifiesto y Service Worker. No hay sitio público ni prueba en un teléfono.
+Esta versión guarda el reporte en el dispositivo, lo sincroniza con PostgreSQL cuando la API responde y puede servirse como un solo proceso: Fastify entrega la API y el build de React. Hay manifiesto y Service Worker. El sitio público es `https://webproyecto.onrender.com`. No hay prueba en un teléfono.
 
 ## Funciones previstas
 
@@ -17,7 +17,7 @@ Esta versión guarda el reporte en el dispositivo, lo sincroniza con PostgreSQL 
 - API REST y PostgreSQL.
 - Despliegue público en Render, con el código en GitHub.
 
-El registro local, la cola y el alta idempotente están implementados. La instalación en Android e iOS y el despliegue HTTPS no se han comprobado. En desarrollo, Vite y Fastify arrancan por separado. En producción, un solo proceso Node sirve la interfaz y la API en el mismo origen.
+El registro local, la cola y el alta idempotente están implementados. La instalación en Android e iOS no se ha comprobado. El despliegue HTTPS respondió el 2026-10-29. En desarrollo, Vite y Fastify arrancan por separado. En producción, un solo proceso Node sirve la interfaz y la API en el mismo origen.
 
 ## Tecnologías
 

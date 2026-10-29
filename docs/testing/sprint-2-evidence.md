@@ -2,7 +2,7 @@
 
 Fecha local: 2026-10-27. Entorno: Windows, Node.js 22.14.0, pnpm 12.15.0, Edge headless. La base de desarrollo identificada respondió. No hay capturas: no se fabricaron imágenes ni se abrió un teléfono.
 
-El Sprint 2 está implementado y las pruebas automatizadas de esta página pasaron. No está validado por completo. Faltan Android, iOS y una URL HTTPS pública.
+El Sprint 2 está implementado y las pruebas automatizadas de esta página pasaron. No está validado por completo. Faltan Android e iOS. La URL HTTPS pública respondió el 2026-10-29.
 
 ## Matriz
 
@@ -22,7 +22,7 @@ El Sprint 2 está implementado y las pruebas automatizadas de esta página pasar
 | Calidad del repositorio                        | Tabla de comandos de abajo                                                                                               | Aprobado, con las salvedades de auditoría                                                       |
 | Lighthouse                                     | Tabla de puntuaciones                                                                                                    | Ejecutado en local, no en HTTPS público                                                         |
 | Android e iOS                                  | No hay dispositivo conectado a este entorno                                                                              | Pendiente manual                                                                                |
-| Despliegue HTTPS                               | `render.yaml` sigue sin aplicarse. No hay URL                                                                            | No validado. No se publicó nada                                                                 |
+| Despliegue HTTPS                               | `https://webproyecto.onrender.com`, comprobado el 2026-10-29                                                             | En vivo. El blueprint no se aplicó; el servicio se creó en el panel                             |
 
 ## Comandos
 
@@ -66,19 +66,34 @@ La migración `0001_create_service_reports.sql` ya estaba aplicada en la base de
 
 ## HTTPS
 
-El despliegue queda al último. No hay URL pública y no se publica nada mientras sigan abiertas las pruebas del teléfono. `render.yaml` describe un servicio gratuito, con `DATABASE_URL` como secreto que se pega en el panel y sin base nueva. El build y el arranque están en `docs/deployment/render.md`. No se aplicó el blueprint y no se creó ningún servicio.
+El servicio `WebProyecto` está en vivo en `https://webproyecto.onrender.com`. El panel de Render mostró el primer despliegue como correcto el 2026-10-28 por la noche, hora local. `render.yaml` no se aplicó como blueprint: el servicio se creó con el formulario. El plan gratuito se apaga por inactividad y el primer acceso puede tardar cerca de un minuto.
+
+Comprobación del 2026-10-29, 06:03 UTC, sin guardar capturas:
+
+| Solicitud                   | Resultado                              |
+| --------------------------- | -------------------------------------- |
+| `GET /`                     | 200, HTML, con el enlace al manifiesto |
+| `GET /health`               | 200, `status: ok`                      |
+| `GET /health/ready`         | 200, `database: up`                    |
+| `GET /api/v1`               | 200, versión `v1`                      |
+| `GET /api/missing`          | 404 JSON, no HTML                      |
+| `GET /mis-reportes`         | 200, el mismo HTML de la interfaz      |
+| `GET /manifest.webmanifest` | 200, `application/manifest+json`       |
+| `GET /sw.js`                | 200, JavaScript                        |
+
+La respuesta incluye `strict-transport-security`. No se abrió la página en un teléfono y no hay captura de esa pantalla.
 
 ## Seguridad
 
-No hay autenticación. Quien conozca el `clientId` puede leer ese reporte. El UUID no se enumera en un listado, pero esto no es un sistema multiusuario. Las entradas se validan en el cliente y en la API. `client_id` es único. CORS sigue cerrado si `CORS_ORIGIN` está vacío. Helmet envía la política de contenido, `nosniff` y el resto de sus cabeceras por defecto. Los logs de error no incluyen el cuerpo ni la cadena de conexión. El Service Worker no cachea `/api` ni `/health`. Si IndexedDB rechaza la cuota, el reporte no se da por guardado y el mensaje dice que no hay espacio.
+No hay autenticación. Quien abra el sitio puede leer el listado de reportes confirmados. Esto no es un sistema multiusuario. Las entradas se validan en el cliente y en la API. `client_id` es único. CORS sigue cerrado si `CORS_ORIGIN` está vacío. Helmet envía la política de contenido, `nosniff` y el resto de sus cabeceras por defecto. Los logs de error no incluyen el cuerpo ni la cadena de conexión. El Service Worker no cachea `/api` ni `/health`. Si IndexedDB rechaza la cuota, el reporte no se da por guardado y el mensaje dice que no hay espacio.
 
 `@fastify/static` quedó en 10.1.8 por el aviso de salto de ruta corregido en esa serie. La prueba de cliente sigue rechazando `../` fuera del build.
 
 ## Android
 
-Pendiente. Cuando exista HTTPS:
+Pendiente. La URL pública ya existe:
 
-1. Abrir la URL en Chrome.
+1. Abrir `https://webproyecto.onrender.com` en Chrome.
 2. Instalar o añadir a la pantalla de inicio.
 3. Abrir la ventana independiente.
 4. Crear un reporte, cerrar la aplicación y comprobar que sigue.

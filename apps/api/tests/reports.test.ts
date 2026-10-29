@@ -48,6 +48,9 @@ function memoryReports(): ReportRepository & { rows: StoredServiceReport[] } {
     async find(clientId) {
       return rows.find((row) => row.clientId === clientId) ?? null;
     },
+    async list() {
+      return rows;
+    },
   };
 }
 
@@ -184,5 +187,35 @@ describe("service report routes", () => {
     });
     expect(missing.statusCode).toBe(404);
     expect(missing.json()).toEqual(toErrorBody(404, "Report not found"));
+  });
+
+  it("lists the reports stored for other devices", async () => {
+    const reports = memoryReports();
+    app = await buildApp({ logger: false, reports });
+    const payload = {
+      clientId: randomUUID(),
+      description: "Visible en otro dispositivo",
+      createdAt: "2026-10-27T18:00:00.000Z",
+    };
+
+    await app.inject({
+      method: "POST",
+      url: "/api/v1/reports",
+      payload,
+    });
+    const response = await app.inject({
+      method: "GET",
+      url: "/api/v1/reports",
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toMatchObject({
+      reports: [
+        {
+          clientId: payload.clientId,
+          description: payload.description,
+        },
+      ],
+    });
   });
 });

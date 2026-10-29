@@ -1,6 +1,6 @@
 # Despliegue en Render
 
-Estado: no desplegado. ADR-010 define un solo servicio web. `render.yaml` está en la raíz y no se ha aplicado. No hay URL pública ni captura HTTPS.
+Estado: en vivo desde el 2026-10-28. ADR-010 define un solo servicio web. `render.yaml` está en la raíz y no se aplicó como blueprint. El servicio `WebProyecto` se creó en el panel. La URL es `https://webproyecto.onrender.com`. No hay captura de la pantalla.
 
 ## Forma
 
@@ -44,14 +44,14 @@ No subas `.env`. La migración no corre al arrancar. `db:migrate` solo acepta `f
 
 ## Comprobación cuando exista el servicio
 
-Estas comprobaciones no se han hecho. HTTPS no está verificado.
+Comprobado el 2026-10-29 contra `https://webproyecto.onrender.com`. No se guardó una captura del navegador.
 
-1. Abrir la URL `https://` del servicio y ver el inicio.
-2. `GET /health` debe responder 200.
-3. `GET /health/ready` debe responder 200 con `database: up` cuando el secreto sea la base de desarrollo.
-4. `GET /api/v1` debe identificar `v1`.
-5. `GET /api/missing` debe responder 404 JSON, no HTML.
-6. `GET /mis-reportes` debe responder el HTML de la interfaz.
+1. `GET /` respondió 200 con el HTML de la interfaz.
+2. `GET /health` respondió 200.
+3. `GET /health/ready` respondió 200 con `database: up`.
+4. `GET /api/v1` identificó `v1`.
+5. `GET /api/missing` respondió 404 JSON.
+6. `GET /mis-reportes` respondió el HTML de la interfaz.
 
 ## Desarrollo local
 

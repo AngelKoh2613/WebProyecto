@@ -50,7 +50,7 @@ PostgreSQL 18 local o PostgreSQL administrado en Render
 4. Sin red, la web lee y escribe IndexedDB.
 5. Al volver la red, una cola local reintenta los cambios pendientes de forma idempotente.
 
-Ese flujo está construido para un alta. No hay edición remota ni listado de reportes de otros usuarios. La pantalla también consulta `GET /health` y `GET /health/ready`.
+Ese flujo está construido para un alta. No hay edición remota ni cuentas de usuario. Al haber red, el dispositivo también baja los reportes ya confirmados en el servidor. La pantalla también consulta `GET /health` y `GET /health/ready`.
 
 ## Límites
 
@@ -61,7 +61,7 @@ Ese flujo está construido para un alta. No hay edición remota ni listado de re
 
 ## PWA
 
-El manifiesto, los iconos y un Service Worker de Workbox cubren la interfaz. La estrategia y sus límites están en ADR-005. La instalación en un teléfono y el HTTPS público siguen sin comprobarse. Los reportes locales no dependen de esa caché: viven en IndexedDB.
+El manifiesto, los iconos y un Service Worker de Workbox cubren la interfaz. La estrategia y sus límites están en ADR-005. La instalación en un teléfono sigue sin comprobarse. El HTTPS público respondió el 2026-10-29. Los reportes locales no dependen de esa caché: viven en IndexedDB.
 
 Los archivos están en `apps/web/public/manifest.webmanifest` y `apps/web/public/icons/`. `index.html` enlaza el manifiesto. La comparación por sistema está en [browser-compatibility.md](browser-compatibility.md) y el checklist en [pwa-installation-checklist.md](../testing/pwa-installation-checklist.md).
 
@@ -75,7 +75,7 @@ ADR-006 fija IndexedDB mediante Dexie.js, los estados locales y la cola. Cache S
 
 ## Despliegue
 
-En producción, Fastify sirve la API y el build de React desde el mismo proceso. Vite solo se usa en desarrollo. ADR-010 fija esa forma y sustituye la publicación en dos servicios de ADR-007. `render.yaml` describe un servicio web con plan `free`, sin base de datos nueva. El blueprint no se ha aplicado y no hay URL HTTPS comprobada. El detalle está en `docs/deployment/render.md`.
+En producción, Fastify sirve la API y el build de React desde el mismo proceso. Vite solo se usa en desarrollo. ADR-010 fija esa forma y sustituye la publicación en dos servicios de ADR-007. `render.yaml` describe un servicio web con plan `free`, sin base de datos nueva. Ese blueprint no se aplicó. El servicio creado en el panel está en `https://webproyecto.onrender.com`. El detalle está en `docs/deployment/render.md`.
 
 ## Fuentes de las decisiones
 

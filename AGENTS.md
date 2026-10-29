@@ -1,6 +1,6 @@
 # Field Service PWA
 
-Monorepo de una PWA académica para reportes de servicio en campo. La plataforma, el shell instalable y la sincronización de reportes están implementados. La prueba en un teléfono y el HTTPS público siguen pendientes.
+Monorepo de una PWA académica para reportes de servicio en campo. La plataforma, el shell instalable y la sincronización de reportes están implementados. El sitio público está en `https://webproyecto.onrender.com`. La prueba en un teléfono sigue pendiente.
 
 ## Leer primero
 

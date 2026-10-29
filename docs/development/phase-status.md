@@ -2,11 +2,11 @@
 
 ## Sprint 2, fase 3: validación, 2026-10-27
 
-La prueba de extremo a extremo contra el build de producción pasó. Lighthouse se ejecutó en `http://127.0.0.1:3012`, no en un sitio público. Android, iOS y el despliegue HTTPS siguen pendientes. El detalle y la matriz están en `docs/testing/sprint-2-evidence.md`.
+La prueba de extremo a extremo contra el build de producción pasó. Lighthouse se ejecutó en `http://127.0.0.1:3012`, no en el sitio público. Android e iOS siguen pendientes. El 2026-10-29, `https://webproyecto.onrender.com` respondió por HTTPS. El detalle y la matriz están en `docs/testing/sprint-2-evidence.md`.
 
-El Sprint 2 está implementado y cubierto por pruebas automatizadas. No está validado por completo: faltan el teléfono y, al final, la URL HTTPS.
+El Sprint 2 está implementado y cubierto por pruebas automatizadas. No está validado por completo: falta el teléfono.
 
-El despliegue queda al último. GitHub, Render, el túnel y la captura HTTPS no se hacen hasta cerrar el resto. `render.yaml` sigue sin aplicarse.
+El servicio público se creó en el panel de Render, no aplicando `render.yaml`. El plan gratuito se apaga por inactividad.
 
 | Comando                         | Resultado                                                                          |
 | ------------------------------- | ---------------------------------------------------------------------------------- |

@@ -1,4 +1,7 @@
-import type { ServiceReportSyncResponse } from "@field-service/contracts";
+import type {
+  ServiceReportListResponse,
+  ServiceReportSyncResponse,
+} from "@field-service/contracts";
 import { createServiceReportSchema } from "@field-service/validation";
 import type { FastifyInstance } from "fastify";
 import type { ReportRepository } from "../reports/repository.js";
@@ -8,6 +11,17 @@ export async function registerReportRoutes(
   app: FastifyInstance,
   reports?: ReportRepository,
 ): Promise<void> {
+  app.get("/api/v1/reports", async (_request, reply) => {
+    if (!reports) {
+      return reply.code(503).send(toErrorBody(503));
+    }
+
+    const body: ServiceReportListResponse = {
+      reports: await reports.list(),
+    };
+    return body;
+  });
+
   app.post("/api/v1/reports", async (request, reply) => {
     const parsed = createServiceReportSchema.safeParse(request.body);
     if (!parsed.success) {

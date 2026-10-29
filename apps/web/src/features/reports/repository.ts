@@ -150,6 +150,51 @@ export async function markSyncError(
   });
 }
 
+export async function importSyncedReports(
+  db: FieldServiceDatabase,
+  incoming: Array<{
+    clientId: string;
+    remoteId: string;
+    description: string;
+    technicianLabel: string | null;
+    createdAt: string;
+  }>,
+  syncedAt: string,
+): Promise<void> {
+  await guard(() =>
+    db.transaction("rw", db.reports, async () => {
+      for (const row of incoming) {
+        const current = await db.reports.get(row.clientId);
+        if (!current) {
+          await db.reports.add({
+            clientId: row.clientId,
+            description: row.description,
+            technicianLabel: row.technicianLabel,
+            createdAt: row.createdAt,
+            updatedAt: syncedAt,
+            syncStatus: "synced",
+            remoteId: row.remoteId,
+            syncedAt,
+            errorMessage: null,
+            attemptCount: 0,
+            nextAttemptAt: null,
+          });
+          continue;
+        }
+        if (current.syncStatus !== "synced") continue;
+        await db.reports.update(row.clientId, {
+          description: row.description,
+          technicianLabel: row.technicianLabel,
+          remoteId: row.remoteId,
+          createdAt: row.createdAt,
+          syncedAt,
+          updatedAt: syncedAt,
+        });
+      }
+    }),
+  );
+}
+
 export async function prepareManualRetry(
   db: FieldServiceDatabase,
 ): Promise<void> {

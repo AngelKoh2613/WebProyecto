@@ -4,7 +4,7 @@
 
 Técnicos de campo necesitan registrar y consultar reportes de servicio en zonas rurales donde la conexión falla. La solución académica es una PWA utilizable en Android e iOS, con API REST, PostgreSQL y despliegue público.
 
-La fase 1 preparó el repositorio, los límites entre módulos y la documentación. La fase 2 del proyecto dejó ejecutables la web, la API y PostgreSQL. La fase 3 documentó la arquitectura. En el Sprint 2, la interfaz puede instalarse como shell y los reportes se guardan y sincronizan. Siguen pendientes el teléfono, Lighthouse y el HTTPS público.
+La fase 1 preparó el repositorio, los límites entre módulos y la documentación. La fase 2 del proyecto dejó ejecutables la web, la API y PostgreSQL. La fase 3 documentó la arquitectura. En el Sprint 2, la interfaz puede instalarse como shell y los reportes se guardan y sincronizan. El sitio público responde por HTTPS. Siguen pendientes el teléfono y Lighthouse sobre esa URL.
 
 El encargo escrito por el equipo académico se trata como especificación aprobada de esta fase. Las decisiones que aún requieren confirmación están en [Preguntas abiertas](#preguntas-abiertas).
 
@@ -12,23 +12,23 @@ El encargo escrito por el equipo académico se trata como especificación aproba
 
 Estos puntos los exige la actividad. No están implementados salvo que la columna de estado diga lo contrario.
 
-| ID     | Requisito                                           | Estado                                                                            |
-| ------ | --------------------------------------------------- | --------------------------------------------------------------------------------- |
-| REQ-01 | Técnicos de campo operan con conectividad limitada  | Registrado. Sin flujo de campo                                                    |
-| REQ-02 | Registro y consulta de reportes de servicio         | Alta local y remota por `clientId`. Sin listado general                           |
-| REQ-03 | Interfaz responsiva                                 | Inicio, formulario y lista de reportes con Tailwind                               |
-| REQ-04 | Uso desde Android e iOS mediante el navegador       | Pendiente de prueba en dispositivos                                               |
-| REQ-05 | Instalación como PWA                                | Manifiesto y Service Worker listos. Sin prueba en un teléfono ni en HTTPS público |
-| REQ-06 | HTTPS en el despliegue público                      | Previsto en Render. No desplegado                                                 |
-| REQ-07 | Web App Manifest                                    | `apps/web/public/manifest.webmanifest`, enlazado en el HTML                       |
-| REQ-08 | Service Worker que intercepte `fetch`               | Workbox en el build. Precaché y fallback de navegación. La API no se cachea       |
-| REQ-09 | Caché de recursos esenciales                        | Precaché del shell. Sin caché de respuestas de la API                             |
-| REQ-10 | Persistencia local de reportes                      | IndexedDB con Dexie. Probado con `fake-indexeddb`                                 |
-| REQ-11 | Recuperación y sincronización al volver la conexión | Cola local. Sin Background Sync y sin prueba en iOS                               |
-| REQ-12 | API REST                                            | Salud, índice y `POST`/`GET` de un reporte                                        |
-| REQ-13 | Auditoría Lighthouse de la PWA                      | Pendiente                                                                         |
-| REQ-14 | Prueba en Chrome para Android y Safari para iOS     | Pendiente                                                                         |
-| REQ-15 | Repositorio GitHub y despliegue público             | Git local preparado. Sin remoto ni despliegue                                     |
+| ID     | Requisito                                           | Estado                                                                                      |
+| ------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| REQ-01 | Técnicos de campo operan con conectividad limitada  | Registrado. Sin flujo de campo                                                              |
+| REQ-02 | Registro y consulta de reportes de servicio         | Alta local y remota por `clientId`. El listado baja los confirmados a otros dispositivos    |
+| REQ-03 | Interfaz responsiva                                 | Inicio, formulario y lista de reportes con Tailwind                                         |
+| REQ-04 | Uso desde Android e iOS mediante el navegador       | Pendiente de prueba en dispositivos                                                         |
+| REQ-05 | Instalación como PWA                                | Manifiesto y Service Worker listos. El sitio público ya es HTTPS. Sin prueba en un teléfono |
+| REQ-06 | HTTPS en el despliegue público                      | `https://webproyecto.onrender.com` respondió el 2026-10-29                                  |
+| REQ-07 | Web App Manifest                                    | `apps/web/public/manifest.webmanifest`, enlazado en el HTML                                 |
+| REQ-08 | Service Worker que intercepte `fetch`               | Workbox en el build. Precaché y fallback de navegación. La API no se cachea                 |
+| REQ-09 | Caché de recursos esenciales                        | Precaché del shell. Sin caché de respuestas de la API                                       |
+| REQ-10 | Persistencia local de reportes                      | IndexedDB con Dexie. Probado con `fake-indexeddb`                                           |
+| REQ-11 | Recuperación y sincronización al volver la conexión | Cola local. Sin Background Sync y sin prueba en iOS                                         |
+| REQ-12 | API REST                                            | Salud, índice y `POST`/`GET` de un reporte                                                  |
+| REQ-13 | Auditoría Lighthouse de la PWA                      | Pendiente                                                                                   |
+| REQ-14 | Prueba en Chrome para Android y Safari para iOS     | Pendiente                                                                                   |
+| REQ-15 | Repositorio GitHub y despliegue público             | Git local preparado. Sin remoto ni despliegue                                               |
 
 ## Decisiones técnicas propuestas
 

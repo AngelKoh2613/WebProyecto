@@ -6,6 +6,7 @@ import {
   LocalStorageError,
   createLocalReport,
   getLocalReport,
+  importSyncedReports,
   listLocalReports,
   updateDraft,
 } from "./repository";
@@ -223,5 +224,45 @@ describe("local reports", () => {
     expect(storedLocally?.syncStatus).toBe("synced");
     expect(storedLocally?.remoteId).toBe(remoteId);
     expect(storedLocally?.description).toBe("Respuesta perdida");
+  });
+
+  it("copies a server report onto a device that does not have it", async () => {
+    const db = openDatabase();
+    const pending = await createLocalReport(
+      db,
+      { description: "Sigue solo en este teléfono" },
+      "pending",
+    );
+
+    await importSyncedReports(
+      db,
+      [
+        {
+          clientId: pending.clientId,
+          remoteId: "22222222-2222-4222-8222-222222222222",
+          description: "No debe pisar el pendiente",
+          technicianLabel: null,
+          createdAt: pending.createdAt,
+        },
+        {
+          clientId: "33333333-3333-4333-8333-333333333333",
+          remoteId: "44444444-4444-4444-8444-444444444444",
+          description: "Llegó desde otro dispositivo",
+          technicianLabel: null,
+          createdAt: "2026-10-28T12:00:00.000Z",
+        },
+      ],
+      "2026-10-29T06:00:00.000Z",
+    );
+
+    const localPending = await getLocalReport(db, pending.clientId);
+    const imported = await getLocalReport(
+      db,
+      "33333333-3333-4333-8333-333333333333",
+    );
+    expect(localPending?.description).toBe("Sigue solo en este teléfono");
+    expect(localPending?.syncStatus).toBe("pending");
+    expect(imported?.syncStatus).toBe("synced");
+    expect(imported?.description).toBe("Llegó desde otro dispositivo");
   });
 });

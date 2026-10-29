@@ -14,6 +14,7 @@ import { formatWhen } from "../../features/reports/format-when";
 import { ReportsScreen } from "../../features/reports/ReportsScreen";
 import { StatusBadge } from "../../features/reports/status-label";
 import { useFieldReports } from "../../features/reports/use-field-reports";
+import { offersIosInstall } from "../../pwa/ios-install";
 import {
   getShellStatus,
   readOnline,
@@ -103,7 +104,7 @@ export function HomeScreen({
         </aside>
 
         <div className="min-w-0">
-          <header className="flex items-center justify-end gap-4 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+          <header className="border-b border-slate-200 bg-white">
             <ConnectionStatus
               status={status}
               syncing={fieldReports.syncing}
@@ -112,6 +113,14 @@ export function HomeScreen({
           </header>
 
           <main className="px-4 py-5 sm:px-6 sm:py-6">
+            {section !== "reportes" && fieldReports.notice ? (
+              <p
+                role="status"
+                className="mb-4 rounded-xl bg-blue-50 px-4 py-3 text-sm text-blue-900"
+              >
+                {fieldReports.notice}
+              </p>
+            ) : null}
             {section === "inicio" ? (
               <Dashboard
                 counts={counts}
@@ -410,6 +419,29 @@ function Stat({
   );
 }
 
+function subscribeNarrowViewport(listener: () => void): () => void {
+  if (typeof window.matchMedia !== "function") return () => undefined;
+  const query = window.matchMedia("(max-width: 1023px)");
+  query.addEventListener("change", listener);
+  return () => query.removeEventListener("change", listener);
+}
+
+function readNarrowViewport(): boolean {
+  if (typeof window.matchMedia !== "function") return false;
+  return window.matchMedia("(max-width: 1023px)").matches;
+}
+
+function readStandalone(): boolean {
+  const media =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(display-mode: standalone)").matches
+      : false;
+  return (
+    media ||
+    (navigator as Navigator & { standalone?: boolean }).standalone === true
+  );
+}
+
 interface InstallPrompt extends Event {
   prompt: () => Promise<void>;
 }
@@ -430,6 +462,26 @@ function ConnectionStatus({
     getShellStatus,
   );
   const [install, setInstall] = useState<InstallPrompt | null>(null);
+  const [installSteps, setInstallSteps] = useState(false);
+  const narrow = useSyncExternalStore(
+    subscribeNarrowViewport,
+    readNarrowViewport,
+    () => false,
+  );
+  const standalone = readStandalone();
+  const iosInstall = offersIosInstall({
+    userAgent: navigator.userAgent,
+    platform: navigator.platform,
+    maxTouchPoints: navigator.maxTouchPoints ?? 0,
+    standalone,
+  });
+  const installKind = install
+    ? "prompt"
+    : iosInstall
+      ? "ios"
+      : narrow && !standalone
+        ? "hint"
+        : null;
 
   useEffect(() => {
     const onPrompt = (event: Event) => {
@@ -453,12 +505,11 @@ function ConnectionStatus({
     readyToSync ||
     shell.offlineReady ||
     shell.updateAvailable ||
-    shell.registrationFailed ||
-    install !== null;
+    shell.registrationFailed;
 
   return (
-    <div className="mr-auto flex min-w-0 flex-col gap-2">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-slate-600">
+    <div className="flex min-w-0 flex-col">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-sm text-slate-600 sm:px-6">
         <p className="flex items-center gap-2">
           <span
             className={`size-2 rounded-full ${online ? "bg-emerald-500" : "bg-slate-400"}`}
@@ -468,11 +519,38 @@ function ConnectionStatus({
         </p>
         <p>{serverLabel(status)}</p>
       </div>
+      {installKind ? (
+        <div className="border-t border-slate-200 px-4 py-3 sm:px-6">
+          <button
+            type="button"
+            aria-expanded={installKind === "prompt" ? undefined : installSteps}
+            className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-semibold text-white sm:w-fit"
+            onClick={() => {
+              if (installKind === "prompt" && install) {
+                void install.prompt().finally(() => {
+                  setInstall(null);
+                });
+                return;
+              }
+              setInstallSteps((open) => !open);
+            }}
+          >
+            Instalar
+          </button>
+          {installSteps ? (
+            <p className="mt-2 max-w-xl text-sm leading-6 text-slate-700">
+              {installKind === "ios"
+                ? "En iPhone no aparece el aviso de Chrome. Pulsa Compartir, elige Añadir a pantalla de inicio y confirma."
+                : "Abre el menú del navegador y elige Instalar aplicación o Añadir a pantalla de inicio."}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
       {showDetails ? (
         <div
           role="status"
           aria-live="polite"
-          className="flex max-w-xl flex-col gap-2 text-sm text-slate-700"
+          className="flex max-w-xl flex-col gap-2 px-4 pb-3 text-sm text-slate-700 sm:px-6"
         >
           {syncing ? <p>Sincronización en curso</p> : null}
           {readyToSync && !syncing ? <p>Listo para sincronizar</p> : null}
@@ -501,19 +579,6 @@ function ConnectionStatus({
                 Actualizar
               </button>
             </p>
-          ) : null}
-          {install ? (
-            <button
-              type="button"
-              className="w-fit rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm font-medium text-slate-800"
-              onClick={() => {
-                void install.prompt().finally(() => {
-                  setInstall(null);
-                });
-              }}
-            >
-              Instalar
-            </button>
           ) : null}
         </div>
       ) : null}

@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { ServiceReportRecord } from "@field-service/contracts";
 import type { createServiceReportSchema } from "@field-service/validation";
@@ -54,6 +54,14 @@ export function createReportRepository(db: NodePgDatabase<typeof schema>) {
     async find(clientId: string): Promise<StoredServiceReport | null> {
       const row = await findRow(db, clientId);
       return row ? toRecord(row) : null;
+    },
+
+    async list(): Promise<StoredServiceReport[]> {
+      const rows = await db
+        .select()
+        .from(serviceReports)
+        .orderBy(desc(serviceReports.createdAt));
+      return rows.map(toRecord);
     },
   };
 }

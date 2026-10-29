@@ -162,6 +162,24 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
+  it("explica la instalación en un iPhone", () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
+    const agent = vi.spyOn(navigator, "userAgent", "get");
+    agent.mockReturnValue(
+      "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+    );
+
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Instalar" }));
+
+    expect(
+      screen.getByText(/Añadir a pantalla de inicio/i),
+    ).toBeInTheDocument();
+  });
+
   it("abre Mis reportes sin inventar registros", () => {
     vi.stubGlobal(
       "fetch",

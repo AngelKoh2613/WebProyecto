@@ -47,3 +47,7 @@ export interface ServiceReportRecord {
 export interface ServiceReportSyncResponse extends ServiceReportRecord {
   outcome: "created" | "existing";
 }
+
+export interface ServiceReportListResponse {
+  reports: ServiceReportRecord[];
+}

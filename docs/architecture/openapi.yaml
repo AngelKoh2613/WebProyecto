@@ -55,13 +55,33 @@ paths:
               schema:
                 $ref: "#/components/schemas/ApiIndexResponse"
   /api/v1/reports:
+    get:
+      operationId: listServiceReports
+      summary: Devuelve los reportes confirmados para mostrarlos en otro dispositivo.
+      description: >
+        No hay autenticación. Cualquiera que abra el sitio puede leer este
+        listado. No incluye borradores que todavía no llegaron al servidor.
+      responses:
+        "200":
+          description: Reportes confirmados, del más reciente al más antiguo.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceReportList"
+        "503":
+          description: No hay base configurada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
     post:
       operationId: syncServiceReport
       summary: Crea un reporte o recupera el ya guardado con el mismo clientId.
       description: >
         clientId es la clave de idempotencia. El mismo cuerpo devuelve el
         registro existente. Un cuerpo distinto con el mismo identificador no
-        sustituye la fila. No hay listado de todos los reportes.
+        sustituye la fila. El listado permite que otro dispositivo muestre
+        los reportes ya confirmados. No hay cuentas de usuario.
       requestBody:
         required: true
         content:
@@ -239,6 +259,15 @@ components:
             outcome:
               type: string
               enum: [created, existing]
+    ServiceReportList:
+      type: object
+      additionalProperties: false
+      required: [reports]
+      properties:
+        reports:
+          type: array
+          items:
+            $ref: "#/components/schemas/ServiceReport"
     ApiError:
       type: object
       additionalProperties: false

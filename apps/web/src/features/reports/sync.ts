@@ -1,6 +1,10 @@
-import { serviceReportSyncResponseSchema } from "@field-service/validation";
+import {
+  serviceReportListSchema,
+  serviceReportSyncResponseSchema,
+} from "@field-service/validation";
 import type { FieldServiceDatabase, LocalReport } from "./db";
 import {
+  importSyncedReports,
   listLocalReports,
   markSyncError,
   markSynced,
@@ -108,6 +112,28 @@ function errorText(status: Exclude<SendResult["status"], "synced">): string {
     return "El servidor rechazó el reporte. Sigue guardado en este dispositivo.";
   }
   return "No hubo respuesta del servidor. El reporte sigue en este dispositivo.";
+}
+
+export async function pullRemoteReports(
+  db: FieldServiceDatabase,
+  baseUrl: string,
+  syncedAt: string,
+): Promise<void> {
+  const response = await fetch(`${baseUrl}/api/v1/reports`, {
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(
+      "No se pudieron traer los reportes guardados en el servidor.",
+    );
+  }
+  const parsed = serviceReportListSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    throw new Error(
+      "No se pudieron traer los reportes guardados en el servidor.",
+    );
+  }
+  await importSyncedReports(db, parsed.data.reports, syncedAt);
 }
 
 export function createHttpReportSender(baseUrl: string): ReportSender {

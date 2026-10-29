@@ -8,7 +8,11 @@ import {
   listLocalReports,
   prepareManualRetry,
 } from "./repository";
-import { createHttpReportSender, syncReportQueue } from "./sync";
+import {
+  createHttpReportSender,
+  pullRemoteReports,
+  syncReportQueue,
+} from "./sync";
 
 export function useFieldReports(serverReachable: boolean) {
   const [reports, setReports] = useState<LocalReport[]>([]);
@@ -34,11 +38,21 @@ export function useFieldReports(serverReachable: boolean) {
       setSyncing(true);
       try {
         if (manual) await prepareManualRetry(fieldServiceDatabase());
+        const now = new Date().toISOString();
         await syncReportQueue(
           fieldServiceDatabase(),
           createHttpReportSender(apiBaseUrl),
-          { now: Date.now(), online: true, manual },
+          { now: Date.parse(now), online: true, manual },
         );
+        try {
+          await pullRemoteReports(fieldServiceDatabase(), apiBaseUrl, now);
+        } catch (error) {
+          setNotice(
+            error instanceof Error
+              ? error.message
+              : "No se pudieron traer los reportes guardados en el servidor.",
+          );
+        }
       } catch (error) {
         setStorageError(
           error instanceof LocalStorageError
@@ -71,10 +85,15 @@ export function useFieldReports(serverReachable: boolean) {
     const onVisible = () => {
       if (document.visibilityState === "visible") void runSync(false);
     };
+    const onPageShow = () => {
+      void runSync(false);
+    };
     window.addEventListener("online", onOnline);
+    window.addEventListener("pageshow", onPageShow);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.removeEventListener("online", onOnline);
+      window.removeEventListener("pageshow", onPageShow);
       document.removeEventListener("visibilitychange", onVisible);
     };
   }, [runSync]);

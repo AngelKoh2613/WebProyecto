@@ -2,7 +2,7 @@
 
 API HTTP con Fastify. Separa el arranque (`src/server.ts`), la construcción de la aplicación (`src/app`), la configuración (`src/config`), la seguridad y CORS (`src/plugins`), las rutas de sistema (`src/routes`), el acceso a datos (`src/db`) y las respuestas de error (`src/shared`).
 
-`GET /health` comprueba el proceso y no abre PostgreSQL. `GET /health/ready` informa si la base está sin configurar, caída o disponible. `GET /api/v1` identifica la versión inicial. `POST /api/v1/reports` crea o recupera un reporte por `clientId`. `GET /api/v1/reports/:clientId` devuelve ese reporte. No hay listado general ni autenticación. Si la base no está configurada, esos dos recursos responden 503.
+`GET /health` comprueba el proceso y no abre PostgreSQL. `GET /health/ready` informa si la base está sin configurar, caída o disponible. `GET /api/v1` identifica la versión inicial. `POST /api/v1/reports` crea o recupera un reporte por `clientId`. `GET /api/v1/reports` devuelve los confirmados y `GET /api/v1/reports/:clientId` devuelve uno. No hay autenticación. Si la base no está configurada, esos recursos responden 503.
 
 Con `NODE_ENV=production`, el mismo proceso sirve `apps/web/dist` en `/`. Una ruta de cliente recibe `index.html`. `/api` y `/health` que no existen siguen en JSON. En desarrollo ese directorio no se sirve: lo hace Vite.
 

@@ -24,7 +24,7 @@ Solo un borrador puede modificarse. Un reporte pendiente, sincronizado o con err
 
 PostgreSQL guarda la copia confirmada en `service_reports`. La migración aditiva es `0001_create_service_reports.sql`. `client_id` tiene un índice único. La inserción usa `ON CONFLICT (client_id) DO NOTHING` y después lee la fila. El mismo cuerpo devuelve 200. Un cuerpo distinto con el mismo identificador devuelve 409 y no sustituye la fila. La primera inserción devuelve 201.
 
-`POST /api/v1/reports` sincroniza un reporte. `GET /api/v1/reports/:clientId` consulta uno. No hay un listado de todos los reportes. Sin autenticación, el UUID del cliente es el alcance de acceso de esta fase académica. No es una autorización de usuario.
+`POST /api/v1/reports` sincroniza un reporte. `GET /api/v1/reports/:clientId` consulta uno. `GET /api/v1/reports` devuelve los confirmados para que otro dispositivo los muestre. Sin autenticación, ese listado es público. No es una autorización de usuario. Un reporte que todavía no se envió no se pisa con la copia del servidor.
 
 La cola vive en el mismo almacén. Se procesa al abrir la aplicación, cuando la página vuelve a ser visible, cuando el navegador informa que hay red, con un temporizador para el próximo intento y con el botón de reintento. No usa Background Sync. Como máximo hay un envío de la cola a la vez. Un fallo no descarta el reporte ni detiene los demás. Hay cinco intentos automáticos, con espera de 2 segundos que se duplica hasta cinco minutos. Se reintenta ante un fallo de red o ante HTTP 408, 429 o 500 o superior. Un 409 u otro 4xx no se reintenta solo. El reintento manual vuelve a poner el contador en cero. Un reporte solo pasa a `synced` cuando la respuesta 200 o 201 valida el identificador remoto.
 
