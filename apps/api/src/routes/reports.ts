@@ -27,6 +27,7 @@ export async function registerReportRoutes(
       return reply.code(401).send(toErrorBody(401));
     }
 
+    await reports.claimUnassigned(user.id);
     const body: ServiceReportListResponse = {
       reports: await reports.list(user.id),
     };

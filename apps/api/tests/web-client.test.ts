@@ -98,6 +98,9 @@ describe("compiled client", () => {
     expect(page.headers["content-type"]).toContain("text/html");
     expect(page.body).toContain("Field Service");
     expect(page.headers["cache-control"]).toBe("no-cache");
+    expect(page.headers["referrer-policy"]).toBe(
+      "strict-origin-when-cross-origin",
+    );
     expect(screen.statusCode).toBe(200);
     expect(screen.body).toContain("Field Service");
     expect(asset.statusCode).toBe(200);

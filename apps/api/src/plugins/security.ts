@@ -12,6 +12,9 @@ export async function registerSecurity(app: FastifyInstance): Promise<void> {
         "img-src": ["'self'", "data:", "https://tile.openstreetmap.org"],
       },
     },
+    referrerPolicy: {
+      policy: "strict-origin-when-cross-origin",
+    },
   });
   await app.register(rateLimit, {
     max: REQUESTS_PER_MINUTE,

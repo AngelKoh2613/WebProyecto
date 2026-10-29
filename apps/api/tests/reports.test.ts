@@ -125,6 +125,11 @@ function memoryReports(): ReportRepository & {
         ) ?? null
       );
     },
+    async claimUnassigned(userId) {
+      for (const row of rows) {
+        if (!row.userId) row.userId = userId;
+      }
+    },
     async list(userId) {
       return rows.filter((row) => row.userId === userId);
     },
@@ -248,6 +253,48 @@ describe("service report routes", () => {
     expect(conflict.statusCode).toBe(409);
     expect(conflict.json()).toEqual(toErrorBody(409));
     expect(reports.rows[0]?.description).toBe("Texto original");
+  });
+
+  it("attaches saved reports without an owner to the account that opens them", async () => {
+    const reports = memoryReports();
+    reports.rows.push({
+      clientId: randomUUID(),
+      remoteId: randomUUID(),
+      description: "Pepe",
+      technicianLabel: "io",
+      latitude: 20.9,
+      longitude: -89.6,
+      createdAt: "2026-10-29T00:00:00.000Z",
+      userId: null,
+    });
+    app = await buildApp({
+      logger: false,
+      reports,
+      accounts: memoryAccounts(),
+    });
+
+    const first = await app.inject({
+      method: "GET",
+      url: "/api/v1/reports",
+      headers: { cookie: "fs_session=session-ana" },
+    });
+    const second = await app.inject({
+      method: "GET",
+      url: "/api/v1/reports",
+      headers: { cookie: "fs_session=session-luis" },
+    });
+
+    expect(first.statusCode).toBe(200);
+    expect(
+      first
+        .json()
+        .reports.map((report: { description: string }) => report.description),
+    ).toContain("Pepe");
+    expect(
+      second
+        .json()
+        .reports.map((report: { description: string }) => report.description),
+    ).not.toContain("Pepe");
   });
 
   it("hides a report that belongs to another account", async () => {
