@@ -3,6 +3,16 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance } from "fastify";
 import { toErrorBody } from "../shared/http-errors.js";
 
+export function requiresFreshCopy(fileName: string): boolean {
+  const name = fileName.toLowerCase();
+  return (
+    name === "index.html" ||
+    name === "sw.js" ||
+    name === "manifest.webmanifest" ||
+    name.startsWith("workbox-")
+  );
+}
+
 export function isClientNavigation(method: string, url: string): boolean {
   if (method !== "GET" && method !== "HEAD") {
     return false;
@@ -39,7 +49,7 @@ export async function registerWebClient(
     return reply.sendFile("index.html", { maxAge: 0, immutable: false });
   });
 
-  app.addHook("onSend", async (_request, reply, payload) => {
+  app.addHook("onSend", async (request, reply, payload) => {
     const filePath =
       typeof payload === "object" &&
       payload !== null &&
@@ -47,7 +57,11 @@ export async function registerWebClient(
       typeof payload.path === "string"
         ? payload.path
         : "";
-    if (path.basename(filePath) === "index.html") {
+    const urlName = path.posix.basename(request.url.split("?")[0] ?? "");
+    if (
+      requiresFreshCopy(path.basename(filePath)) ||
+      requiresFreshCopy(urlName)
+    ) {
       reply.header("cache-control", "no-cache");
     }
     return payload;

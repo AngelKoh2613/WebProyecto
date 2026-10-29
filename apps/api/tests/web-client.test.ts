@@ -61,6 +61,14 @@ describe("compiled client", () => {
     );
     await writeFile(path.join(webRoot, "assets", "app.js"), "console.log(1)");
     await writeFile(
+      path.join(webRoot, "sw.js"),
+      "self.addEventListener('install',()=>{});",
+    );
+    await writeFile(
+      path.join(webRoot, "workbox-abc.js"),
+      "self.addEventListener('install',()=>{});",
+    );
+    await writeFile(
       path.join(webRoot, "assets", "large.js"),
       `console.log(${JSON.stringify("x".repeat(2048))});`,
     );
@@ -71,6 +79,8 @@ describe("compiled client", () => {
     const page = await app.inject({ method: "GET", url: "/" });
     const screen = await app.inject({ method: "GET", url: "/mis-reportes" });
     const asset = await app.inject({ method: "GET", url: "/assets/app.js" });
+    const worker = await app.inject({ method: "GET", url: "/sw.js" });
+    const workbox = await app.inject({ method: "GET", url: "/workbox-abc.js" });
     const compressed = await app.inject({
       method: "GET",
       url: "/assets/large.js",
@@ -92,6 +102,11 @@ describe("compiled client", () => {
     expect(screen.body).toContain("Field Service");
     expect(asset.statusCode).toBe(200);
     expect(asset.body).toContain("console.log(1)");
+    expect(asset.headers["cache-control"]).not.toBe("no-cache");
+    expect(worker.statusCode).toBe(200);
+    expect(worker.headers["cache-control"]).toBe("no-cache");
+    expect(workbox.statusCode).toBe(200);
+    expect(workbox.headers["cache-control"]).toBe("no-cache");
     expect(compressed.statusCode).toBe(200);
     expect(compressed.headers["content-encoding"]).toBe("gzip");
     expect(health.statusCode).toBe(200);

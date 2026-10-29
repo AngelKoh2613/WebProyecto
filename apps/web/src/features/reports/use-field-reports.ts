@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { apiBaseUrl } from "../../app/api-status";
 import { fieldServiceDatabase } from "./db";
 import type { LocalAccount, LocalReport, LocalSyncStatus } from "./db";
@@ -23,6 +23,8 @@ export function useFieldReports(
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
+  const syncLock = useRef(false);
+
   const refresh = useCallback(async () => {
     const rows = await listLocalReports(fieldServiceDatabase());
     setReports(
@@ -33,15 +35,15 @@ export function useFieldReports(
   const runSync = useCallback(
     async (manual = false) => {
       const online = navigator.onLine;
-      if (!account) return;
+      if (!account || syncLock.current) return;
       if (!online) {
         if (manual) {
           setNotice("Sin conexión. Los reportes siguen en este dispositivo.");
         }
         return;
       }
-      if (!manual && !serverReachable) return;
 
+      syncLock.current = true;
       setSyncing(true);
       try {
         if (manual) await prepareManualRetry(fieldServiceDatabase());
@@ -72,11 +74,12 @@ export function useFieldReports(
             : "No se pudo sincronizar los reportes.",
         );
       } finally {
+        syncLock.current = false;
         setSyncing(false);
         await refresh().catch(() => undefined);
       }
     },
-    [account, refresh, serverReachable],
+    [account, refresh],
   );
 
   useEffect(() => {
@@ -94,21 +97,24 @@ export function useFieldReports(
     const onOnline = () => {
       void runSync(false);
     };
-    const onVisible = () => {
-      if (document.visibilityState === "visible") void runSync(false);
-    };
-    const onPageShow = () => {
+    const onOpen = () => {
+      void refresh().catch(() => undefined);
       void runSync(false);
     };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") onOpen();
+    };
     window.addEventListener("online", onOnline);
-    window.addEventListener("pageshow", onPageShow);
+    window.addEventListener("pageshow", onOpen);
+    window.addEventListener("focus", onOpen);
     document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.removeEventListener("online", onOnline);
-      window.removeEventListener("pageshow", onPageShow);
+      window.removeEventListener("pageshow", onOpen);
+      window.removeEventListener("focus", onOpen);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [runSync]);
+  }, [refresh, runSync]);
 
   useEffect(() => {
     if (!serverReachable || !navigator.onLine) return;

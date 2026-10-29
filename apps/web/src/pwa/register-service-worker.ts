@@ -4,6 +4,7 @@ import {
   markShellReady,
   markUpdateAvailable,
 } from "./shell-status";
+import { shouldTakeWaitingWorker, watchAppForeground } from "./shell-update";
 
 function watchControlledShell(): void {
   if (!("serviceWorker" in navigator)) return;
@@ -27,6 +28,23 @@ export function registerProductionServiceWorker(): void {
   let updateServiceWorker: (reloadPage?: boolean) => Promise<void> = async () =>
     undefined;
 
+  let applying = false;
+  let stopWatching: (() => void) | undefined;
+
+  const applyWaitingWorker = (waiting: boolean) => {
+    if (
+      !shouldTakeWaitingWorker({
+        controlled: Boolean(navigator.serviceWorker.controller),
+        waiting,
+        applying,
+      })
+    ) {
+      return;
+    }
+    applying = true;
+    void updateServiceWorker(true);
+  };
+
   updateServiceWorker = registerSW({
     immediate: true,
     onOfflineReady() {
@@ -34,6 +52,21 @@ export function registerProductionServiceWorker(): void {
     },
     onNeedRefresh() {
       markUpdateAvailable(() => updateServiceWorker(true));
+      applyWaitingWorker(true);
+    },
+    onRegisteredSW(_scriptUrl, registration) {
+      if (!registration) return;
+      const checkForUpdate = () => {
+        void registration.update().then(
+          () => {
+            applyWaitingWorker(Boolean(registration.waiting));
+          },
+          () => undefined,
+        );
+      };
+      checkForUpdate();
+      stopWatching?.();
+      stopWatching = watchAppForeground(checkForUpdate);
     },
     onRegisterError() {
       markRegistrationFailed();
