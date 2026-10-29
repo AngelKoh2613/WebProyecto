@@ -1,0 +1,6 @@
+{
+  "name": "@field-service/config",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Owner of shared tool configuration. Active files currently live at the repository root."
+}

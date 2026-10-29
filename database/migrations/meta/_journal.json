@@ -1,0 +1,20 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1793075572634,
+      "tag": "0000_create_infrastructure_checks",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793163295932,
+      "tag": "0001_create_service_reports",
+      "breakpoints": true
+    }
+  ]
+}

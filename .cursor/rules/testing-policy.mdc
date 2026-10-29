@@ -1,0 +1,21 @@
+---
+description: Pruebas que deben acompañar un cambio de comportamiento
+globs: "**/*.{test,spec}.{ts,tsx}"
+alwaysApply: false
+---
+
+# Pruebas
+
+La estrategia está en `docs/testing/strategy.md`. La skill aplicable es `test-driven-development`.
+
+- Una conducta nueva nace con una prueba que falla si esa conducta desaparece.
+- La API se prueba con `app.inject`. No abras un puerto ni te conectes a PostgreSQL en una prueba unitaria.
+- No dejes `it.skip`, `describe.skip` ni aserciones eliminadas para conseguir un resultado verde.
+- Ejecuta el paquete afectado:
+
+```bash
+pnpm --filter @field-service/api test
+pnpm --filter @field-service/web test
+```
+
+No declares la tarea terminada solo porque el archivo de prueba existe.

@@ -1,0 +1,15 @@
+---
+description: Documentación y ADR al cambiar decisiones
+globs: "**/*.md"
+alwaysApply: false
+---
+
+# Documentación
+
+Usa `documentation-and-adrs` al registrar una decisión. Los ADR de este repositorio están en `docs/architecture/decisions/`, no en `docs/decisions/`.
+
+- Distingue un requisito de la actividad de una decisión técnica propuesta.
+- No documentes como disponible el offline, la sincronización, la autenticación o la PWA instalable.
+- Si cambia una decisión, actualiza el ADR y `docs/architecture/overview.md` en el mismo cambio.
+- Los comandos del README deben existir en un `package.json`. El resultado real se anota en `docs/development/phase-status.md`.
+- No copies una skill completa dentro de un documento. Enlaza su ruta.

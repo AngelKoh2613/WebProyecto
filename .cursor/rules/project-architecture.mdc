@@ -1,0 +1,21 @@
+---
+description: Límites del monorepo, PWA y alcance por fases
+alwaysApply: true
+---
+
+# Arquitectura
+
+Lee `docs/architecture/overview.md` y el ADR afectado antes de cambiar límites entre módulos.
+
+- `apps/web` no importa `apps/api` ni abre PostgreSQL.
+- `apps/api` no importa React. Los tipos compartidos viven en `@field-service/contracts`.
+- Un esquema compartido solo entra en `@field-service/validation` si lo usan dos aplicaciones.
+- No añadas reglas de negocio a `@field-service/domain` antes de que un requisito las defina.
+- No uses Docker, Docker Compose, Kubernetes ni microservicios.
+- No crees proyectos Capacitor, Android ni iOS. `apps/mobile` es una reserva.
+- No registres un Service Worker ni afirmes que la sincronización offline funciona hasta que una fase lo implemente y lo verifique.
+- Consulta la skill en `.agents/skills/` que corresponda a la tarea. Las reglas no sustituyen esas instrucciones.
+
+```text
+web → contracts ← api → PostgreSQL
+```

@@ -1,0 +1,255 @@
+openapi: 3.0.3
+info:
+  title: Field Service API
+  version: 0.1.0
+  description: >
+    Contrato manual. Describe la sonda del proceso, la disponibilidad de
+    PostgreSQL, el índice de la API y el alta idempotente de un reporte.
+    No está generado por el servidor y no incluye autenticación.
+servers:
+  - url: http://127.0.0.1:3000
+    description: Desarrollo local. No es el despliegue público.
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Comprueba que el proceso HTTP responde.
+      description: No consulta PostgreSQL.
+      responses:
+        "200":
+          description: El proceso está en ejecución.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Comprueba la dependencia configurada.
+      description: >
+        Si DATABASE_URL no está definida, la base figura como not_configured.
+        Si la consulta de disponibilidad falla, figura como down. Ninguno de
+        esos casos devuelve el sobre de error ni el detalle de la excepción.
+      responses:
+        "200":
+          description: La base configurada respondió.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: La base no está configurada o no respondió.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+  /api/v1:
+    get:
+      operationId: getApiIndex
+      summary: Identifica la versión inicial de la API.
+      responses:
+        "200":
+          description: Identifica el servicio y la versión. No lista reportes.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiIndexResponse"
+  /api/v1/reports:
+    post:
+      operationId: syncServiceReport
+      summary: Crea un reporte o recupera el ya guardado con el mismo clientId.
+      description: >
+        clientId es la clave de idempotencia. El mismo cuerpo devuelve el
+        registro existente. Un cuerpo distinto con el mismo identificador no
+        sustituye la fila. No hay listado de todos los reportes.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateServiceReport"
+      responses:
+        "201":
+          description: El reporte se guardó por primera vez.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceReportSync"
+        "200":
+          description: El mismo reporte ya estaba guardado.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceReportSync"
+        "400":
+          description: La entrada no cumple el esquema.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "409":
+          description: Ese clientId ya existe con otro contenido.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: No hay base configurada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/v1/reports/{clientId}:
+    get:
+      operationId: getServiceReport
+      summary: Devuelve el reporte de ese identificador de cliente.
+      parameters:
+        - name: clientId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: El reporte existe.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ServiceReport"
+        "400":
+          description: El identificador no es un UUID.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "404":
+          description: No hay un reporte con ese identificador.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "503":
+          description: No hay base configurada.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /api/missing:
+    get:
+      operationId: getMissingExample
+      summary: Ejemplo de una ruta de API inexistente.
+      description: >
+        En producción, una ruta de navegación del cliente recibe index.html.
+        Una ruta bajo /api o /health que no existe sigue devolviendo este JSON.
+      responses:
+        "404":
+          description: No hay un recurso en esta ruta.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      additionalProperties: false
+      required: [status, service]
+      properties:
+        status:
+          type: string
+          enum: [ok]
+        service:
+          type: string
+          enum: [field-service-api]
+    ReadinessResponse:
+      type: object
+      additionalProperties: false
+      required: [status, checks]
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+        checks:
+          type: object
+          additionalProperties: false
+          required: [database]
+          properties:
+            database:
+              type: string
+              enum: [up, down, not_configured]
+    ApiIndexResponse:
+      type: object
+      additionalProperties: false
+      required: [service, version, status]
+      properties:
+        service:
+          type: string
+          enum: [field-service-api]
+        version:
+          type: string
+          enum: [v1]
+        status:
+          type: string
+          enum: [initial]
+    CreateServiceReport:
+      type: object
+      additionalProperties: false
+      required: [clientId, description, createdAt]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        description:
+          type: string
+          minLength: 1
+          maxLength: 2000
+        technicianLabel:
+          type: string
+          nullable: true
+          maxLength: 80
+        createdAt:
+          type: string
+          format: date-time
+    ServiceReport:
+      type: object
+      additionalProperties: false
+      required: [clientId, remoteId, description, technicianLabel, createdAt]
+      properties:
+        clientId:
+          type: string
+          format: uuid
+        remoteId:
+          type: string
+          format: uuid
+        description:
+          type: string
+        technicianLabel:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+    ServiceReportSync:
+      allOf:
+        - $ref: "#/components/schemas/ServiceReport"
+        - type: object
+          required: [outcome]
+          properties:
+            outcome:
+              type: string
+              enum: [created, existing]
+    ApiError:
+      type: object
+      additionalProperties: false
+      required: [error]
+      properties:
+        error:
+          type: object
+          additionalProperties: false
+          required: [code, message]
+          properties:
+            code:
+              type: string
+            message:
+              type: string

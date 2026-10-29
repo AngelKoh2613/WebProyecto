@@ -1,0 +1,17 @@
+---
+description: Secretos, entradas externas y cabeceras
+alwaysApply: true
+---
+
+# Seguridad
+
+Sigue `.agents/skills/security-and-hardening/SKILL.md` cuando la tarea acepte datos, credenciales o integraciones.
+
+- No commitees `.env`, contraseñas, tokens ni cadenas `DATABASE_URL` reales. El ejemplo usa los literales `USER` y `PASSWORD`.
+- No registres el objeto de entorno ni la URL de la base.
+- Valida el entorno y cualquier cuerpo HTTP con un esquema. No concatenes SQL.
+- Los errores hacia el cliente salen de `toErrorBody`. No devuelvas la traza.
+- No abras CORS con `*` ni actives `trustProxy` sin el proxy concreto del despliegue.
+- No guardes sesiones en `localStorage`.
+- Los scripts de instalación de dependencias permanecen bloqueados. Añade un paquete a `allowBuilds` solo después de revisar qué ejecuta.
+- Autenticación, subidas y cambios de CORS se consultan antes de implementarse.

@@ -1,0 +1,19 @@
+---
+description: TypeScript estricto y límites de módulos
+globs: "**/*.{ts,tsx}"
+alwaysApply: false
+---
+
+# TypeScript
+
+`tsconfig.base.json` ya activa `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` y `verbatimModuleSyntax`. No los relajes para cerrar un error.
+
+- Importa tipos con `import type` o con el modificador `type`.
+- No uses `any`. Si un valor externo es desconocido, valida en el borde y estrecha el tipo.
+- No silencies con `@ts-ignore` o `@ts-expect-error` sin una causa que un ADR o un comentario pueda explicar.
+- La API, en `module: NodeNext`, importa archivos relativos con sufijo `.js`.
+- No dupliques un tipo que ya exporta `@field-service/contracts`.
+
+```typescript
+import { API_SERVICE_NAME, type HealthResponse } from "@field-service/contracts";
+```

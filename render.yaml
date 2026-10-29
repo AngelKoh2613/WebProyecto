@@ -1,0 +1,24 @@
+# Blueprint de un solo servicio. No crea PostgreSQL ni publica nada por sí mismo.
+# Aplicarlo en el panel de Render crea el servicio web. El plan free evita el
+# plan de pago que Render usa por defecto. Confírmalo antes de aceptar.
+services:
+  - type: web
+    name: field-service
+    runtime: node
+    plan: free
+    branch: main
+    autoDeployTrigger: off
+    healthCheckPath: /health
+    buildCommand: npm install -g pnpm@12.15.0 && pnpm install --frozen-lockfile && pnpm build
+    startCommand: node apps/api/dist/server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 22.14.0
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: LOG_LEVEL
+        value: info
+      - key: DATABASE_URL
+        sync: false
