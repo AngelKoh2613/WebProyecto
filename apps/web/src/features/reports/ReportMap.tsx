@@ -1,13 +1,9 @@
-import { useEffect, useRef } from "react";
-import type { Map as LeafletMap } from "leaflet";
-import "leaflet/dist/leaflet.css";
-import "./report-map.css";
+import { useEffect, useRef, useState } from "react";
+import type { PointerEvent } from "react";
 import type { LocalReport } from "./db";
-import {
-  coordinateCenter,
-  REPORT_MAP_TILES,
-  reportsWithCoordinates,
-} from "./map-points";
+import { buildMapView, reportsWithCoordinates } from "./map-points";
+
+const TILE_SIZE = 256;
 
 export function ReportMap({
   reports,
@@ -16,121 +12,173 @@ export function ReportMap({
   reports: LocalReport[];
   onOpenReport: (clientId: string) => void;
 }) {
-  const node = useRef<HTMLDivElement>(null);
+  const frame = useRef<HTMLDivElement>(null);
+  const drag = useRef<{
+    pointerId: number;
+    x: number;
+    y: number;
+    panX: number;
+    panY: number;
+  } | null>(null);
   const points = reportsWithCoordinates(reports);
   const signature = points
     .map(
       (report) => `${report.clientId}:${report.latitude}:${report.longitude}`,
     )
     .join("|");
-  const pointsRef = useRef(points);
-  const openRef = useRef(onOpenReport);
-  pointsRef.current = points;
-  openRef.current = onOpenReport;
+  const [size, setSize] = useState({ width: 320, height: 384 });
+  const [zoom, setZoom] = useState<number | null>(null);
+  const [pan, setPan] = useState({ x: 0, y: 0 });
 
   useEffect(() => {
-    const element = node.current;
-    if (!element) return;
-    let map: LeafletMap | undefined;
-    let observer: ResizeObserver | undefined;
-    let cancelled = false;
-
-    void import("leaflet")
-      .then((leaflet) => {
-        if (cancelled) return;
-        const L = leaflet.default;
-        const located = pointsRef.current;
-        map = L.map(element, {
-          zoomControl: true,
-          fadeAnimation: false,
-          zoomAnimation: false,
-        });
-
-        const only = located[0];
-        if (located.length === 1 && only) {
-          map.setView([only.latitude, only.longitude], 15);
-        } else if (located.length > 1) {
-          map.setView(coordinateCenter(located), 12);
-        } else {
-          map.setView([0, 0], 2);
-        }
-
-        const tiles = L.tileLayer(REPORT_MAP_TILES, {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-          maxZoom: 19,
-        }).addTo(map);
-
-        const markers = located.map((report) => {
-          const marker = L.circleMarker([report.latitude, report.longitude], {
-            radius: 10,
-            color: "#ffffff",
-            weight: 3,
-            fillColor: "#1d4ed8",
-            fillOpacity: 1,
-          }).addTo(map as LeafletMap);
-          marker.bindTooltip(report.description, {
-            permanent: located.length <= 8,
-            direction: "top",
-            offset: [0, -8],
-            opacity: 1,
-            className: "report-map-label",
-          });
-          marker.on("click", () => openRef.current(report.clientId));
-          return marker;
-        });
-
-        let framed = false;
-        const frame = () => {
-          if (!map) return;
-          map.invalidateSize();
-          const size = map.getSize();
-          if (framed || size.x === 0 || size.y === 0) return;
-          const onlyMarker = markers[0];
-          if (markers.length === 1 && onlyMarker) {
-            map.setView(onlyMarker.getLatLng(), 15);
-          } else if (markers.length > 1) {
-            map.fitBounds(
-              L.latLngBounds(markers.map((marker) => marker.getLatLng())),
-              { padding: [32, 32], maxZoom: 15 },
-            );
-          }
-          framed = markers.length > 0;
-        };
-
-        map.whenReady(frame);
-        requestAnimationFrame(frame);
-        tiles.on("load", () => {
-          map?.invalidateSize();
-        });
-        if (typeof ResizeObserver === "function") {
-          observer = new ResizeObserver(() => {
-            frame();
-          });
-          observer.observe(element);
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-      observer?.disconnect();
-      map?.remove();
-    };
+    setZoom(null);
+    setPan({ x: 0, y: 0 });
   }, [signature]);
+
+  useEffect(() => {
+    const element = frame.current;
+    if (!element || typeof ResizeObserver !== "function") return;
+    const read = () => {
+      if (element.clientWidth > 0 && element.clientHeight > 0) {
+        setSize({
+          width: element.clientWidth,
+          height: element.clientHeight,
+        });
+      }
+    };
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [points.length]);
+
+  if (points.length === 0) {
+    return (
+      <div
+        className="grid h-96 place-items-center rounded-2xl border border-slate-200 bg-slate-100 px-6 text-center text-sm text-slate-600"
+        role="region"
+        aria-label="Mapa de reportes"
+      >
+        No hay coordenadas para mostrar en el mapa.
+      </div>
+    );
+  }
+
+  const view = buildMapView(points, size, {
+    ...(zoom === null ? {} : { zoom }),
+    panX: pan.x,
+    panY: pan.y,
+  });
+
+  const onPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if ((event.target as HTMLElement).closest("button, a")) return;
+    drag.current = {
+      pointerId: event.pointerId,
+      x: event.clientX,
+      y: event.clientY,
+      panX: pan.x,
+      panY: pan.y,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const onPointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    const current = drag.current;
+    if (!current || current.pointerId !== event.pointerId) return;
+    setPan({
+      x: current.panX + event.clientX - current.x,
+      y: current.panY + event.clientY - current.y,
+    });
+  };
+
+  const endDrag = (event: PointerEvent<HTMLDivElement>) => {
+    if (drag.current?.pointerId === event.pointerId) drag.current = null;
+  };
 
   return (
     <div
-      className="relative z-0 overflow-hidden rounded-2xl border border-slate-200"
-      style={{ transform: "translateZ(0)" }}
+      ref={frame}
+      className="relative w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-200"
+      role="region"
+      aria-label="Mapa de reportes"
+      style={{ height: "24rem", touchAction: "none" }}
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
     >
-      <div
-        ref={node}
-        className="report-map w-full"
-        style={{ height: "24rem" }}
-        role="region"
-        aria-label="Mapa de reportes"
-      />
+      {view.tiles.map((tile) => (
+        <img
+          key={tile.key}
+          src={tile.url}
+          alt=""
+          width={TILE_SIZE}
+          height={TILE_SIZE}
+          draggable={false}
+          style={{
+            position: "absolute",
+            left: tile.left,
+            top: tile.top,
+            width: TILE_SIZE,
+            height: TILE_SIZE,
+            maxWidth: "none",
+          }}
+        />
+      ))}
+      {view.markers.map((marker) => (
+        <div
+          key={marker.clientId}
+          className="absolute flex justify-center"
+          style={{
+            left: marker.left,
+            top: marker.top,
+            width: 0,
+            height: 0,
+            alignItems: "flex-end",
+          }}
+        >
+          <button
+            type="button"
+            className="mb-1 flex flex-col items-center"
+            onClick={() => onOpenReport(marker.clientId)}
+          >
+            <span className="max-w-40 truncate rounded-full bg-blue-700 px-2 py-1 text-xs font-semibold text-white">
+              {marker.description}
+            </span>
+            <span className="mt-1 size-3.5 rounded-full border-2 border-white bg-blue-600 shadow" />
+          </button>
+        </div>
+      ))}
+      <div className="absolute top-2 left-2 z-20 overflow-hidden rounded-md border border-slate-300 bg-white shadow">
+        <button
+          type="button"
+          aria-label="Acercar"
+          className="block h-8 w-8 border-b border-slate-300 text-lg leading-none font-semibold"
+          onClick={() =>
+            setZoom((current) => Math.min(18, (current ?? view.zoom) + 1))
+          }
+        >
+          +
+        </button>
+        <button
+          type="button"
+          aria-label="Alejar"
+          className="block h-8 w-8 text-lg leading-none font-semibold"
+          onClick={() =>
+            setZoom((current) => Math.max(2, (current ?? view.zoom) - 1))
+          }
+        >
+          −
+        </button>
+      </div>
+      <a
+        className="absolute right-2 bottom-2 z-20 rounded bg-white/90 px-1.5 py-0.5 text-[10px] text-slate-600"
+        href="https://www.openstreetmap.org/copyright"
+        target="_blank"
+        rel="noreferrer"
+      >
+        © OpenStreetMap
+      </a>
     </div>
   );
 }
