@@ -1,4 +1,5 @@
 import type { LocalReport } from "../../features/reports/db";
+import { reportsWithCoordinates } from "../../features/reports/map-points";
 import { ReportMap } from "../../features/reports/ReportMap";
 import { formatWhen } from "../../features/reports/format-when";
 import { StatusBadge } from "../../features/reports/status-label";
@@ -12,9 +13,7 @@ export function MapScreen({
   onOpenReport: (clientId: string) => void;
   onCreate: () => void;
 }) {
-  const located = reports.filter(
-    (report) => report.latitude !== null && report.longitude !== null,
-  );
+  const located = reportsWithCoordinates(reports);
 
   return (
     <section className="flex flex-col gap-5">
