@@ -9,7 +9,7 @@ import { serverLabel } from "../../app/server-label";
 import { MapScreen } from "../sections/MapScreen";
 import { SettingsScreen } from "../sections/SettingsScreen";
 import { SyncScreen } from "../sections/SyncScreen";
-import type { LocalReport } from "../../features/reports/db";
+import type { LocalAccount, LocalReport } from "../../features/reports/db";
 import { formatWhen } from "../../features/reports/format-when";
 import { ReportsScreen } from "../../features/reports/ReportsScreen";
 import { StatusBadge } from "../../features/reports/status-label";
@@ -38,12 +38,16 @@ export function HomeScreen({
   status,
   section,
   onSectionChange,
+  account,
+  onLogout,
 }: {
   status: ApiStatus;
   section: SectionId;
   onSectionChange: (section: SectionId) => void;
+  account: Pick<LocalAccount, "userId" | "name" | "email">;
+  onLogout: () => void;
 }) {
-  const fieldReports = useFieldReports(status.api === "up");
+  const fieldReports = useFieldReports(status.api === "up", account);
   const [composing, setComposing] = useState(false);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const counts = countReports(fieldReports.reports);
@@ -72,10 +76,17 @@ export function HomeScreen({
             <span>
               <span className="block text-sm font-semibold">Field Service</span>
               <span className="block text-xs text-slate-500">
-                Técnicos de Campo
+                {account.name}
               </span>
             </span>
           </div>
+          <button
+            type="button"
+            className="mt-3 px-2 text-left text-sm text-slate-600 hover:text-slate-900"
+            onClick={onLogout}
+          >
+            Salir
+          </button>
           <nav
             aria-label="Secciones"
             className="mt-6 flex min-w-0 gap-1 overflow-x-auto lg:flex-col"
@@ -320,7 +331,7 @@ function Dashboard({
               <div>
                 <h2 className="font-semibold">Ver en el mapa</h2>
                 <p className="text-sm text-slate-500">
-                  Reportes de este dispositivo, por día.
+                  Reportes con coordenadas de este dispositivo.
                 </p>
               </div>
             </div>

@@ -15,6 +15,13 @@
       "when": 1793163295932,
       "tag": "0001_create_service_reports",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793255087449,
+      "tag": "0002_add_accounts_and_coordinates",
+      "breakpoints": true
     }
   ]
 }

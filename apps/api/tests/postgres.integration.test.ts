@@ -5,10 +5,16 @@ import { existsSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterAll, describe, expect, it } from "vitest";
+import { createAccountRepository } from "../src/auth/repository.js";
 import { createDatabase } from "../src/db/client.js";
 import { isDevelopmentMigrationTarget } from "../src/db/migration-target.js";
 import { createReportRepository } from "../src/reports/repository.js";
-import { infrastructureChecks, serviceReports } from "../src/db/schema.js";
+import {
+  infrastructureChecks,
+  serviceReports,
+  sessions,
+  users,
+} from "../src/db/schema.js";
 
 const repositoryRoot = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -73,21 +79,35 @@ describe.skipIf(!canUseDevelopmentDatabase)(
       );
       await migrate(database.db, { migrationsFolder });
       const reports = createReportRepository(database.db);
+      const accounts = createAccountRepository(database.db);
       const clientId = randomUUID();
+      const registered = await accounts.register({
+        name: "Integracion",
+        email: `integracion-${clientId}@example.test`,
+        password: "password12",
+      });
+      if (registered === "exists") {
+        throw new Error("The integration account already existed");
+      }
       const input = {
         clientId,
         description: "Reporte de integración",
         technicianLabel: null,
+        latitude: 19.4326,
+        longitude: -99.1332,
         createdAt: "2026-10-27T18:30:00.000Z",
       };
 
       try {
-        const created = await reports.sync(input);
-        const repeated = await reports.sync(input);
-        const conflict = await reports.sync({
-          ...input,
-          description: "Contenido distinto",
-        });
+        const created = await reports.sync(input, registered);
+        const repeated = await reports.sync(input, registered);
+        const conflict = await reports.sync(
+          {
+            ...input,
+            description: "Contenido distinto",
+          },
+          registered,
+        );
         const rows = await database.db
           .select({
             id: serviceReports.id,
@@ -106,8 +126,12 @@ describe.skipIf(!canUseDevelopmentDatabase)(
         expect(rows[0]?.description).toBe("Reporte de integración");
       } finally {
         await database.db
+          .delete(sessions)
+          .where(eq(sessions.userId, registered.id));
+        await database.db
           .delete(serviceReports)
           .where(eq(serviceReports.clientId, clientId));
+        await database.db.delete(users).where(eq(users.id, registered.id));
       }
     }, 20_000);
   },

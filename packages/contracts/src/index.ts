@@ -33,6 +33,8 @@ export interface CreateServiceReportRequest {
   clientId: string;
   description: string;
   technicianLabel?: string | null;
+  latitude: number;
+  longitude: number;
   createdAt: string;
 }
 
@@ -41,7 +43,15 @@ export interface ServiceReportRecord {
   remoteId: string;
   description: string;
   technicianLabel: string | null;
+  latitude: number | null;
+  longitude: number | null;
   createdAt: string;
+}
+
+export interface AccountProfile {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export interface ServiceReportSyncResponse extends ServiceReportRecord {

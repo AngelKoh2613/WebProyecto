@@ -5,8 +5,11 @@ import { ReportsScreen } from "./ReportsScreen";
 
 const pending: LocalReport = {
   clientId: "11111111-1111-4111-8111-111111111111",
+  userId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   description: "La bomba no arranca",
   technicianLabel: null,
+  latitude: 19.4326,
+  longitude: -99.1332,
   createdAt: "2026-10-27T18:00:00.000Z",
   updatedAt: "2026-10-27T18:00:00.000Z",
   syncStatus: "pending",

@@ -5,7 +5,9 @@ import {
   render,
   screen,
 } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { saveLocalAccount } from "../features/auth/local-account";
+import { fieldServiceDatabase } from "../features/reports/db";
 import {
   markShellReady,
   markUpdateAvailable,
@@ -13,7 +15,20 @@ import {
 } from "../pwa/shell-status";
 import { App } from "./App";
 
+const accountId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+
 describe("App", () => {
+  beforeEach(async () => {
+    const db = fieldServiceDatabase();
+    await db.reports.clear();
+    await db.account.clear();
+    await saveLocalAccount(db, {
+      userId: accountId,
+      name: "Técnico",
+      email: "tecnico@example.test",
+    });
+  });
+
   afterEach(() => {
     cleanup();
     resetShellStatus();
@@ -30,7 +45,7 @@ describe("App", () => {
     render(<App />);
 
     expect(
-      screen.getByRole("heading", { name: "Bienvenido, Técnico" }),
+      await screen.findByRole("heading", { name: "Bienvenido, Técnico" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Field Service")).toBeInTheDocument();
     expect(screen.getByText("Reportes de hoy")).toBeInTheDocument();
@@ -52,7 +67,7 @@ describe("App", () => {
     ).toBeGreaterThan(0);
   });
 
-  it("avisa sin conexión y la copia local solo cuando el shell está listo", () => {
+  it("avisa sin conexión y la copia local solo cuando el shell está listo", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     vi.stubGlobal(
       "fetch",
@@ -61,7 +76,7 @@ describe("App", () => {
 
     render(<App />);
 
-    expect(screen.getByText("Sin conexión")).toBeInTheDocument();
+    expect(await screen.findByText("Sin conexión")).toBeInTheDocument();
     expect(
       screen.getByText(/Los datos del servidor no están disponibles/i),
     ).toBeInTheDocument();
@@ -78,7 +93,7 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("muestra la actualización y la instalación solo cuando el navegador las ofrece", () => {
+  it("muestra la actualización y la instalación solo cuando el navegador las ofrece", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("network down")),
@@ -87,6 +102,7 @@ describe("App", () => {
     const prompt = vi.fn().mockResolvedValue(undefined);
 
     render(<App />);
+    await screen.findByRole("heading", { name: "Bienvenido, Técnico" });
     act(() => {
       markUpdateAvailable(apply);
     });
@@ -162,7 +178,7 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("explica la instalación en un iPhone", () => {
+  it("explica la instalación en un iPhone", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("network down")),
@@ -173,6 +189,7 @@ describe("App", () => {
     );
 
     render(<App />);
+    await screen.findByRole("heading", { name: "Bienvenido, Técnico" });
     fireEvent.click(screen.getByRole("button", { name: "Instalar" }));
 
     expect(
@@ -180,13 +197,14 @@ describe("App", () => {
     ).toBeInTheDocument();
   });
 
-  it("abre Mis reportes sin inventar registros", () => {
+  it("abre Mis reportes sin inventar registros", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockRejectedValue(new Error("network down")),
     );
 
     render(<App />);
+    await screen.findByRole("heading", { name: "Bienvenido, Técnico" });
     fireEvent.click(screen.getByRole("button", { name: "Mis reportes" }));
 
     expect(
@@ -204,6 +222,7 @@ describe("App", () => {
     );
 
     render(<App />);
+    await screen.findByRole("heading", { name: "Bienvenido, Técnico" });
     fireEvent.click(screen.getByRole("button", { name: "Mapa" }));
     expect(screen.getByRole("heading", { name: "Mapa" })).toBeInTheDocument();
     expect(
@@ -232,6 +251,23 @@ describe("App", () => {
     expect(
       screen.getByRole("heading", { name: "Mis reportes" }),
     ).toBeInTheDocument();
+  });
+
+  it("pide una cuenta antes de abrir los reportes", async () => {
+    await fieldServiceDatabase().account.clear();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockRejectedValue(new Error("network down")),
+    );
+
+    render(<App />);
+
+    expect(
+      await screen.findByRole("button", { name: "Crear una cuenta" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("heading", { name: "Bienvenido, Técnico" }),
+    ).not.toBeInTheDocument();
   });
 });
 

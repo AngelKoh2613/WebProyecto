@@ -21,7 +21,7 @@ Navegador (apps/web)
         v
 API (apps/api)
   Fastify
-  Sin autenticación. Alta idempotente de reportes
+  Cuentas con cookie HttpOnly y alta idempotente de reportes con coordenadas
         |
         | DATABASE_URL abre un pool solo cuando la variable existe
         v
@@ -61,7 +61,7 @@ Ese flujo está construido para un alta. No hay edición remota ni cuentas de us
 
 ## PWA
 
-El manifiesto, los iconos y un Service Worker de Workbox cubren la interfaz. La estrategia y sus límites están en ADR-005. La instalación en un teléfono sigue sin comprobarse. El HTTPS público respondió el 2026-10-29. Los reportes locales no dependen de esa caché: viven en IndexedDB.
+El manifiesto, los iconos y un Service Worker de Workbox cubren la interfaz. La estrategia y sus límites están en ADR-005. Quien usa el proyecto confirmó el 2026-10-29 que el instalador del teléfono ya funciona; el repositorio no guarda esa captura. El HTTPS público respondió el 2026-10-29. Los reportes locales no dependen de esa caché: viven en IndexedDB. El mapa usa las coordenadas del reporte y teselas de OpenStreetMap.
 
 Los archivos están en `apps/web/public/manifest.webmanifest` y `apps/web/public/icons/`. `index.html` enlaza el manifiesto. La comparación por sistema está en [browser-compatibility.md](browser-compatibility.md) y el checklist en [pwa-installation-checklist.md](../testing/pwa-installation-checklist.md).
 

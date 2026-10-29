@@ -2,9 +2,9 @@
 
 ## Sprint 2, fase 3: validación, 2026-10-27
 
-La prueba de extremo a extremo contra el build de producción pasó. Lighthouse se ejecutó en `http://127.0.0.1:3012`, no en el sitio público. Android e iOS siguen pendientes. El 2026-10-29, `https://webproyecto.onrender.com` respondió por HTTPS. El detalle y la matriz están en `docs/testing/sprint-2-evidence.md`.
+La prueba de extremo a extremo contra el build de producción pasó antes de las cuentas. El 2026-10-29, el panel de Lighthouse sobre `https://webproyecto.onrender.com/` marcó Performance 97, Accessibility 100, Best Practices 96 y SEO 100. IndexedDB ya tenía reportes. Quien usa el proyecto confirmó ese día que el instalador del teléfono ya funciona; no hay captura de esa instalación en el repositorio. El detalle está en `docs/testing/sprint-2-evidence.md`.
 
-El Sprint 2 está implementado y cubierto por pruebas automatizadas. No está validado por completo: falta el teléfono.
+Las cuentas y las coordenadas de cada reporte están en el código local. El sitio público no incluye ese cambio hasta un despliegue posterior.
 
 El servicio público se creó en el panel de Render, no aplicando `render.yaml`. El plan gratuito se apaga por inactividad.
 
@@ -16,7 +16,8 @@ El servicio público se creó en el panel de Render, no aplicando `render.yaml`.
 | `pnpm test`                     | API 34 correctas, 0 fallidas, 0 omitidas. Web 22 correctas, 0 fallidas, 0 omitidas |
 | `pnpm e2e`                      | Correcta en Edge headless. No forma parte de CI                                    |
 | `pnpm audit --audit-level=high` | Sin avisos altos. Quedan una moderada de `esbuild` y una baja de `deepmerge`       |
-| Lighthouse 12.8.2               | Performance 96, Accessibility 100, Best Practices 96, SEO 100. Sin categoría PWA   |
+| Lighthouse 12.8.2               | Local: Performance 96, Accessibility 100, Best Practices 96, SEO 100. Sin categoría PWA |
+| Lighthouse en la URL pública    | 2026-10-29: Performance 97, Accessibility 100, Best Practices 96, SEO 100. IndexedDB ya tenía datos |
 | Lighthouse 11.7.1               | PWA 100 en local                                                                   |
 
 ## Sprint 2, fase 2: reportes offline y sincronización, 2026-10-27

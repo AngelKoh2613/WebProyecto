@@ -14,6 +14,7 @@ const { Client } = require("pg");
 const port = 3012;
 const origin = `http://127.0.0.1:${port}`;
 const stamp = `e2e-${Date.now()}`;
+const accountEmail = `${stamp}@example.test`;
 const descriptions = {
   online: `${stamp}-conectado`,
   offline: `${stamp}-sin-red`,
@@ -48,9 +49,12 @@ async function main() {
 
     await saveReport(page, descriptions.online);
     await page.waitForFunction(
-      (description) =>
-        document.body.innerText.includes(description) &&
-        document.body.innerText.includes("Sincronizado"),
+      (description) => {
+        const item = [...document.querySelectorAll("li")].find((node) =>
+          node.textContent?.includes(description),
+        );
+        return item?.textContent?.includes("Sincronizado") ?? false;
+      },
       { timeout: 20_000 },
       descriptions.online,
     );
@@ -63,6 +67,12 @@ async function main() {
       "El reporte con red no quedó sincronizado.",
     );
     clientIds.push(onlineReport.clientId);
+
+    await clickButton(page, "Mapa");
+    await page.waitForFunction(
+      () => document.body.innerText.includes("19.4326, -99.1332"),
+      { timeout: 15_000 },
+    );
 
     await page.setOfflineMode(true);
     await page.waitForFunction(() => !navigator.onLine);
@@ -137,8 +147,11 @@ async function main() {
           clientId: report.clientId,
           description: report.description,
           technicianLabel: report.technicianLabel,
+          latitude: report.latitude,
+          longitude: report.longitude,
           createdAt: report.createdAt,
         }),
+        credentials: "include",
       });
       return response.status;
     }, repeated);
@@ -284,22 +297,22 @@ async function launchBrowser() {
     },
     async close() {
       await connection.send("Browser.close").catch(() => undefined);
-      connection.close();
-      child.kill();
-      await new Promise((resolve) => {
-        child.once("exit", resolve);
-        setTimeout(resolve, 3_000);
+      const exited = await new Promise((resolve) => {
+        const timer = setTimeout(() => resolve(false), 8_000);
+        child.once("exit", () => {
+          clearTimeout(timer);
+          resolve(true);
+        });
       });
+      if (!exited) child.kill();
+      connection.close();
     },
   };
 }
 
 async function openControlled(page) {
   await page.goto(origin, { waitUntil: "domcontentloaded", timeout: 20_000 });
-  await page.waitForFunction(
-    () => document.body.innerText.includes("Bienvenido, Técnico"),
-    { timeout: 15_000 },
-  );
+  await ensureAccount(page);
   await page.waitForFunction(
     async () => {
       const ready = await navigator.serviceWorker?.ready;
@@ -310,6 +323,33 @@ async function openControlled(page) {
   await page.reload({ waitUntil: "domcontentloaded" });
   await page.waitForFunction(
     () => Boolean(navigator.serviceWorker.controller),
+    { timeout: 15_000 },
+  );
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Bienvenido, Técnico"),
+    { timeout: 15_000 },
+  );
+}
+
+async function ensureAccount(page) {
+  await page.waitForFunction(
+    () =>
+      document.body.innerText.includes("Bienvenido, Técnico") ||
+      Boolean(document.querySelector("#account-email")),
+    { timeout: 15_000 },
+  );
+  const needsAccount = await page.evaluate(
+    () => !document.body.innerText.includes("Bienvenido, Técnico"),
+  );
+  if (!needsAccount) return;
+  await clickButton(page, "Crear una cuenta");
+  await page.waitForSelector("#account-name");
+  await page.type("#account-name", "Tecnico e2e");
+  await page.type("#account-email", accountEmail);
+  await page.type("#account-password", "password12");
+  await clickButton(page, "Crear cuenta");
+  await page.waitForFunction(
+    () => document.body.innerText.includes("Bienvenido, Técnico"),
     { timeout: 15_000 },
   );
 }
@@ -325,15 +365,33 @@ async function saveReport(page, description) {
     await clickButton(page, hasNew ? "Nuevo reporte" : "Crear reporte");
   }
   await page.waitForSelector("#report-description");
-  await page.click("#report-description");
-  await page.type("#report-description", description);
+  await fillField(page, "#report-description", description);
+  await fillField(page, "#report-latitude", "19.4326");
+  await fillField(page, "#report-longitude", "-99.1332");
   await clickButton(page, "Guardar reporte");
   await page.waitForFunction(
-    () =>
-      document.body.innerText.includes(
-        "El reporte quedó guardado en este dispositivo.",
+    (description) =>
+      [...document.querySelectorAll("li")].some((node) =>
+        node.textContent?.includes(description),
       ),
     { timeout: 10_000 },
+    description,
+  );
+}
+
+async function fillField(page, selector, value) {
+  await page.evaluate(
+    ({ selector: fieldSelector, value: fieldValue }) => {
+      const field = document.querySelector(fieldSelector);
+      const prototype =
+        field instanceof HTMLTextAreaElement
+          ? HTMLTextAreaElement.prototype
+          : HTMLInputElement.prototype;
+      const setter = Object.getOwnPropertyDescriptor(prototype, "value")?.set;
+      setter?.call(field, fieldValue);
+      field?.dispatchEvent(new Event("input", { bubbles: true }));
+    },
+    { selector, value },
   );
 }
 
@@ -387,16 +445,15 @@ async function countRows(ids) {
 
 async function deleteCreatedRows(ids) {
   await withDatabase(async (database) => {
-    if (ids.length > 0) {
-      await database.query(
-        "delete from service_reports where client_id = any($1::uuid[])",
-        [ids],
-      );
-    }
     await database.query(
-      "delete from service_reports where description = any($1::text[])",
-      [Object.values(descriptions)],
+      "delete from sessions where user_id in (select id from users where email = $1)",
+      [accountEmail],
     );
+    await database.query(
+      "delete from service_reports where client_id = any($1::uuid[]) or description = any($2::text[]) or user_id in (select id from users where email = $3)",
+      [ids, Object.values(descriptions), accountEmail],
+    );
+    await database.query("delete from users where email = $1", [accountEmail]);
   });
 }
 
@@ -509,7 +566,11 @@ class CdpPage {
       if (await this.evaluate(fn, arg)) return;
       await delay(200);
     }
-    throw new Error("Se agotó la espera de la página");
+    throw new Error(
+      `Se agotó la espera de la página. ${String(
+        await this.evaluate(() => document.body.innerText).catch(() => ""),
+      ).slice(0, 400)}`,
+    );
   }
 
   waitEvent(method, timeout) {

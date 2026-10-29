@@ -1,6 +1,6 @@
 # Evidencias del Sprint 2
 
-Fecha local: 2026-10-27. Entorno: Windows, Node.js 22.14.0, pnpm 12.15.0, Edge headless. La base de desarrollo identificada respondió. No hay capturas: no se fabricaron imágenes ni se abrió un teléfono.
+Fecha local: 2026-10-27. Entorno: Windows, Node.js 22.14.0, pnpm 12.15.0, Edge headless. La base de desarrollo identificada respondió. El 2026-10-29 se mostró el panel de Lighthouse de la URL pública; esa imagen no está en el repositorio.
 
 El Sprint 2 está implementado y las pruebas automatizadas de esta página pasaron. No está validado por completo. Faltan Android e iOS. La URL HTTPS pública respondió el 2026-10-29.
 
@@ -20,7 +20,7 @@ El Sprint 2 está implementado y las pruebas automatizadas de esta página pasar
 | Service Worker y caché                         | `GET /sw.js`, el manifiesto y el icono de 512 respondieron 200. Lighthouse 11.7.1 dio PWA 100 en `http://127.0.0.1:3012` | Aprobado en local. `127.0.0.1` es contexto seguro para el navegador; no sustituye HTTPS público |
 | La API no cae en el fallback HTML              | `GET /api/missing` responde 404 JSON                                                                                     | Aprobado                                                                                        |
 | Calidad del repositorio                        | Tabla de comandos de abajo                                                                                               | Aprobado, con las salvedades de auditoría                                                       |
-| Lighthouse                                     | Tabla de puntuaciones                                                                                                    | Ejecutado en local, no en HTTPS público                                                         |
+| Lighthouse                                     | Tabla de puntuaciones                                                                                                    | Local el 2026-10-28. Público el 2026-10-29, en `https://webproyecto.onrender.com/`              |
 | Android e iOS                                  | No hay dispositivo conectado a este entorno                                                                              | Pendiente manual                                                                                |
 | Despliegue HTTPS                               | `https://webproyecto.onrender.com`, comprobado el 2026-10-29                                                             | En vivo. El blueprint no se aplicó; el servicio se creó en el panel                             |
 
@@ -40,7 +40,7 @@ El Sprint 2 está implementado y las pruebas automatizadas de esta página pasar
 
 ## Lighthouse
 
-Origen auditado: `http://127.0.0.1:3012`, el build servido por Fastify. No es el sitio de Render.
+La primera tabla es `http://127.0.0.1:3012`, el build servido por Fastify. La segunda es el panel de DevTools sobre `https://webproyecto.onrender.com/`, a las 00:22 del 2026-10-29. Esa imagen no está guardada en el repositorio. El panel no muestra la versión de Lighthouse ni la categoría PWA.
 
 | Herramienta                             | Categoría      | Puntuación                              |
 | --------------------------------------- | -------------- | --------------------------------------- |
@@ -59,6 +59,17 @@ Best Practices no llega a 100 por dos auditorías que se dejaron así:
 Performance se queda en 96. La primera pintura fue 1.9 s y la más grande 2.5 s, con la limitación de red de Lighthouse. Sigue habiendo JavaScript no usado en la primera pantalla, unos 98 KiB. No se partió el paquete solo para perseguir 100.
 
 Antes de comprimir las respuestas, Performance estaba en 71. `@fastify/compress` 8.1.0 comprime a partir de 1024 bytes. La navegación móvil desbordaba el ancho porque la barra de secciones no podía encogerse; Lighthouse 11 marcaba PWA 88 por eso. Con `min-w-0` la categoría PWA pasó a 100.
+
+El 2026-10-29 el mismo panel, sobre la URL pública, marcó:
+
+| Categoría      | Puntuación |
+| -------------- | ---------- |
+| Performance    | 97         |
+| Accessibility  | 100        |
+| Best Practices | 96         |
+| SEO            | 100        |
+
+Esa corrida avisó que IndexedDB ya tenía datos y que eso puede cambiar Performance. A la izquierda se veían reportes sincronizados, así que no fue una ventana de incógnito. El panel no dice qué auditoría dejó Best Practices en 96. El sitio público sigue en el build anterior: no incluye las cuentas ni el mapa de coordenadas.
 
 ## PostgreSQL
 
@@ -81,11 +92,11 @@ Comprobación del 2026-10-29, 06:03 UTC, sin guardar capturas:
 | `GET /manifest.webmanifest` | 200, `application/manifest+json`       |
 | `GET /sw.js`                | 200, JavaScript                        |
 
-La respuesta incluye `strict-transport-security`. No se abrió la página en un teléfono y no hay captura de esa pantalla.
+La respuesta incluye `strict-transport-security`. Quien usa el proyecto confirmó el 2026-10-29 que el instalador del teléfono ya funciona. No hay captura de esa pantalla en el repositorio.
 
 ## Seguridad
 
-No hay autenticación. Quien abra el sitio puede leer el listado de reportes confirmados. Esto no es un sistema multiusuario. Las entradas se validan en el cliente y en la API. `client_id` es único. CORS sigue cerrado si `CORS_ORIGIN` está vacío. Helmet envía la política de contenido, `nosniff` y el resto de sus cabeceras por defecto. Los logs de error no incluyen el cuerpo ni la cadena de conexión. El Service Worker no cachea `/api` ni `/health`. Si IndexedDB rechaza la cuota, el reporte no se da por guardado y el mensaje dice que no hay espacio.
+Cada reporte pertenece a una cuenta. La sesión va en la cookie `fs_session`, HttpOnly y SameSite=Lax. La contraseña se guarda con scrypt y no se escribe en el registro. `GET /api/v1/reports` solo devuelve los reportes de esa sesión. Las entradas se validan en el cliente y en la API. `client_id` es único. Latitud y longitud son obligatorias en un alta nueva y pueden faltar en filas anteriores. CORS sigue cerrado si `CORS_ORIGIN` está vacío. Helmet envía la política de contenido, con las teselas de OpenStreetMap en `img-src`, `nosniff` y el resto de sus cabeceras por defecto. Los logs de error no incluyen el cuerpo ni la cadena de conexión. El Service Worker no cachea `/api` ni `/health`. Si IndexedDB rechaza la cuota, el reporte no se da por guardado y el mensaje dice que no hay espacio.
 
 `@fastify/static` quedó en 10.1.8 por el aviso de salto de ruta corregido en esa serie. La prueba de cliente sigue rechazando `../` fuera del build.
 

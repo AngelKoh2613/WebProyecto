@@ -57,10 +57,10 @@ paths:
   /api/v1/reports:
     get:
       operationId: listServiceReports
-      summary: Devuelve los reportes confirmados para mostrarlos en otro dispositivo.
+      summary: Devuelve los reportes confirmados de la cuenta.
       description: >
-        No hay autenticación. Cualquiera que abra el sitio puede leer este
-        listado. No incluye borradores que todavía no llegaron al servidor.
+        Exige la cookie de sesión. Solo incluye reportes de esa cuenta.
+        No incluye borradores que todavía no llegaron al servidor.
       responses:
         "200":
           description: Reportes confirmados, del más reciente al más antiguo.
@@ -68,6 +68,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ServiceReportList"
+        "401":
+          description: No hay sesión.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
         "503":
           description: No hay base configurada.
           content:
@@ -80,8 +86,8 @@ paths:
       description: >
         clientId es la clave de idempotencia. El mismo cuerpo devuelve el
         registro existente. Un cuerpo distinto con el mismo identificador no
-        sustituye la fila. El listado permite que otro dispositivo muestre
-        los reportes ya confirmados. No hay cuentas de usuario.
+        sustituye la fila. La latitud y la longitud son obligatorias. El
+        nombre del técnico lo fija la cuenta de la sesión.
       requestBody:
         required: true
         content:
@@ -103,6 +109,12 @@ paths:
                 $ref: "#/components/schemas/ServiceReportSync"
         "400":
           description: La entrada no cumple el esquema.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+        "401":
+          description: No hay sesión.
           content:
             application/json:
               schema:
@@ -215,7 +227,7 @@ components:
     CreateServiceReport:
       type: object
       additionalProperties: false
-      required: [clientId, description, createdAt]
+      required: [clientId, description, latitude, longitude, createdAt]
       properties:
         clientId:
           type: string
@@ -228,13 +240,30 @@ components:
           type: string
           nullable: true
           maxLength: 80
+        latitude:
+          type: number
+          minimum: -90
+          maximum: 90
+        longitude:
+          type: number
+          minimum: -180
+          maximum: 180
         createdAt:
           type: string
           format: date-time
     ServiceReport:
       type: object
       additionalProperties: false
-      required: [clientId, remoteId, description, technicianLabel, createdAt]
+      required:
+        [
+          clientId,
+          remoteId,
+          description,
+          technicianLabel,
+          latitude,
+          longitude,
+          createdAt,
+        ]
       properties:
         clientId:
           type: string
@@ -246,6 +275,12 @@ components:
           type: string
         technicianLabel:
           type: string
+          nullable: true
+        latitude:
+          type: number
+          nullable: true
+        longitude:
+          type: number
           nullable: true
         createdAt:
           type: string

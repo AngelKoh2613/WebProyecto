@@ -14,6 +14,7 @@ describe("versioned migrations", () => {
 
     expect(sqlFiles).toContain("0000_create_infrastructure_checks.sql");
     expect(sqlFiles).toContain("0001_create_service_reports.sql");
+    expect(sqlFiles).toContain("0002_add_accounts_and_coordinates.sql");
 
     for (const name of sqlFiles) {
       const sql = readFileSync(

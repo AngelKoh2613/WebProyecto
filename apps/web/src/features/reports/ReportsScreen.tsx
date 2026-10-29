@@ -32,7 +32,8 @@ export function ReportsScreen({
   onComposingChange: (open: boolean) => void;
   onSave: (
     description: string,
-    technicianLabel: string,
+    latitude: number,
+    longitude: number,
     syncStatus: Extract<LocalSyncStatus, "draft" | "pending">,
   ) => Promise<void>;
   onRetry: () => Promise<void>;
@@ -233,8 +234,8 @@ export function ReportsScreen({
           {composing ? (
             <ReportForm
               onCancel={() => onComposingChange(false)}
-              onSave={async (description, technicianLabel, syncStatus) => {
-                await onSave(description, technicianLabel, syncStatus);
+              onSave={async (description, latitude, longitude, syncStatus) => {
+                await onSave(description, latitude, longitude, syncStatus);
                 onComposingChange(false);
               }}
             />
@@ -258,27 +259,31 @@ function ReportForm({
   onCancel: () => void;
   onSave: (
     description: string,
-    technicianLabel: string,
+    latitude: number,
+    longitude: number,
     syncStatus: Extract<LocalSyncStatus, "draft" | "pending">,
   ) => Promise<void>;
 }) {
   const [description, setDescription] = useState("");
-  const [technicianLabel, setTechnicianLabel] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [locating, setLocating] = useState(false);
 
   async function submit(
     syncStatus: Extract<LocalSyncStatus, "draft" | "pending">,
   ) {
-    const nextError = validate(description, technicianLabel);
-    if (nextError) {
+    const parsed = readCoordinates(latitude, longitude);
+    const nextError = validate(description, parsed);
+    if (nextError || !parsed) {
       setError(nextError);
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      await onSave(description, technicianLabel, syncStatus);
+      await onSave(description, parsed.latitude, parsed.longitude, syncStatus);
     } catch (caught) {
       setError(
         caught instanceof Error
@@ -287,6 +292,27 @@ function ReportForm({
       );
       setSaving(false);
     }
+  }
+
+  function useDeviceLocation() {
+    if (!navigator.geolocation) {
+      setError("Este navegador no entrega la ubicación.");
+      return;
+    }
+    setLocating(true);
+    setError(null);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setLatitude(String(position.coords.latitude));
+        setLongitude(String(position.coords.longitude));
+        setLocating(false);
+      },
+      () => {
+        setError("No se pudo leer la ubicación de este dispositivo.");
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000, maximumAge: 60_000 },
+    );
   }
 
   return (
@@ -311,23 +337,42 @@ function ReportForm({
         maxLength={2000}
         onChange={(event) => setDescription(event.target.value)}
       />
-      <label
-        className="mt-4 block text-sm font-medium text-slate-700"
-        htmlFor="report-technician"
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label
+          className="block text-sm font-medium text-slate-700"
+          htmlFor="report-latitude"
+        >
+          Latitud
+          <input
+            id="report-latitude"
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            inputMode="decimal"
+            value={latitude}
+            onChange={(event) => setLatitude(event.target.value)}
+          />
+        </label>
+        <label
+          className="block text-sm font-medium text-slate-700"
+          htmlFor="report-longitude"
+        >
+          Longitud
+          <input
+            id="report-longitude"
+            className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
+            inputMode="decimal"
+            value={longitude}
+            onChange={(event) => setLongitude(event.target.value)}
+          />
+        </label>
+      </div>
+      <button
+        type="button"
+        className="mt-3 rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-800 disabled:opacity-60"
+        disabled={saving || locating}
+        onClick={useDeviceLocation}
       >
-        Técnico responsable
-      </label>
-      <input
-        id="report-technician"
-        className="mt-1 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm"
-        value={technicianLabel}
-        maxLength={80}
-        onChange={(event) => setTechnicianLabel(event.target.value)}
-      />
-      <p className="mt-1 text-xs text-slate-500">
-        Opcional. No hay una cuenta de usuario, así que este texto no comprueba
-        la identidad de una persona.
-      </p>
+        Usar mi ubicación
+      </button>
       {error ? (
         <p role="alert" className="mt-3 text-sm text-rose-700">
           {error}
@@ -372,10 +417,12 @@ function ReportDetail({ report }: { report: LocalReport }) {
           <dt className="text-slate-500">Descripción</dt>
           <dd className="mt-0.5">{report.description}</dd>
         </div>
-        {report.technicianLabel ? (
+        {report.latitude !== null && report.longitude !== null ? (
           <div>
-            <dt className="text-slate-500">Técnico responsable</dt>
-            <dd className="mt-0.5">{report.technicianLabel}</dd>
+            <dt className="text-slate-500">Coordenadas</dt>
+            <dd className="mt-0.5">
+              {report.latitude}, {report.longitude}
+            </dd>
           </div>
         ) : null}
         <div>
@@ -425,15 +472,37 @@ function ReportDetail({ report }: { report: LocalReport }) {
   );
 }
 
-function validate(description: string, technicianLabel: string): string | null {
+function readCoordinates(
+  latitude: string,
+  longitude: string,
+): { latitude: number; longitude: number } | null {
+  if (latitude.trim() === "" || longitude.trim() === "") return null;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  return { latitude: lat, longitude: lng };
+}
+
+function validate(
+  description: string,
+  coordinates: { latitude: number; longitude: number } | null,
+): string | null {
   if (description.trim().length === 0) {
     return "Escribe la descripción del servicio.";
   }
   if (description.trim().length > 2000) {
     return "La descripción admite hasta 2000 caracteres.";
   }
-  if (technicianLabel.trim().length > 80) {
-    return "El texto del técnico admite hasta 80 caracteres.";
+  if (!coordinates) {
+    return "Indica la latitud y la longitud, o usa la ubicación de este dispositivo.";
+  }
+  if (
+    coordinates.latitude < -90 ||
+    coordinates.latitude > 90 ||
+    coordinates.longitude < -180 ||
+    coordinates.longitude > 180
+  ) {
+    return "La latitud va de -90 a 90 y la longitud de -180 a 180.";
   }
   return null;
 }

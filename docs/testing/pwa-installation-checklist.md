@@ -2,7 +2,7 @@
 
 Fecha de la fase 1 del Sprint 2: 2026-10-27.
 
-La casilla de HTTPS público quedó comprobada por solicitudes a `https://webproyecto.onrender.com` el 2026-10-29. Las de teléfono siguen vacías: no se abrió la aplicación en Android ni en iOS. Las demás casillas marcadas se apoyan en el manifiesto, los PNG y las pruebas del repositorio, no en un dispositivo.
+La casilla de HTTPS público quedó comprobada por solicitudes a `https://webproyecto.onrender.com` el 2026-10-29. Quien usa el proyecto confirmó ese mismo día que el instalador del teléfono ya funciona. El repositorio no guarda la captura. Las demás casillas marcadas se apoyan en el manifiesto, los PNG y las pruebas del repositorio.
 
 | Criterio                                                                             | Estado    | Comprobación                                                                                                                                                                                                                |
 | ------------------------------------------------------------------------------------ | --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -61,7 +61,7 @@ node apps/api/dist/server.js
 4. Con la red cortada, `GET /health` y `POST /api/v1` no deben responder con la página HTML ni con un éxito inventado.
 5. Volver a conectar. Si hay un build nuevo, la interfaz muestra «Actualización disponible» y el botón Actualizar.
 
-En iOS, el aviso `beforeinstallprompt` no existe. La instalación es «Añadir a pantalla de inicio» y no se ha probado. El botón Instalar del código solo aparece cuando el navegador emite ese evento.
+En iOS, el aviso `beforeinstallprompt` no existe. La instalación es «Añadir a pantalla de inicio». Quien usa el proyecto confirmó que ese instalador ya funciona en el teléfono. No hay captura en el repositorio.
 
 ## Diferencias que siguen vigentes
 

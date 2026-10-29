@@ -11,11 +11,18 @@ export type CreateServiceReportInput = z.infer<
   typeof createServiceReportSchema
 >;
 
+export interface ReportOwner {
+  id: string;
+  name: string;
+}
+
 export type StoredServiceReport = ServiceReportRecord;
 
 export type SyncServiceReportResult =
-  | { status: "created" | "existing"; report: StoredServiceReport }
-  | { status: "conflict" };
+  | { status: "created"; report: StoredServiceReport }
+  | { status: "existing"; report: StoredServiceReport }
+  | { status: "conflict" }
+  | { status: "forbidden" };
 
 type ReportRow = typeof serviceReports.$inferSelect;
 
@@ -23,13 +30,17 @@ export function createReportRepository(db: NodePgDatabase<typeof schema>) {
   return {
     async sync(
       input: CreateServiceReportInput,
+      user: ReportOwner,
     ): Promise<SyncServiceReportResult> {
       const inserted = await db
         .insert(serviceReports)
         .values({
           clientId: input.clientId,
+          userId: user.id,
           description: input.description,
-          technicianLabel: input.technicianLabel,
+          technicianLabel: user.name,
+          latitude: input.latitude,
+          longitude: input.longitude,
           createdAt: new Date(input.createdAt),
         })
         .onConflictDoNothing({ target: serviceReports.clientId })
@@ -43,23 +54,53 @@ export function createReportRepository(db: NodePgDatabase<typeof schema>) {
       if (!existing) {
         throw new Error("The report insert did not return a row");
       }
+      if (existing.userId && existing.userId !== user.id) {
+        return { status: "forbidden" };
+      }
+      if (!sameStoredReport(toIdentity(existing), input)) {
+        return { status: "conflict" };
+      }
 
-      if (sameStoredReport(toIdentity(existing), input)) {
+      const needsFill =
+        !existing.userId ||
+        existing.latitude === null ||
+        existing.longitude === null ||
+        !existing.technicianLabel;
+      if (!needsFill) {
         return { status: "existing", report: toRecord(existing) };
       }
 
-      return { status: "conflict" };
+      const updated = await db
+        .update(serviceReports)
+        .set({
+          userId: user.id,
+          technicianLabel: existing.technicianLabel ?? user.name,
+          latitude: existing.latitude ?? input.latitude,
+          longitude: existing.longitude ?? input.longitude,
+        })
+        .where(eq(serviceReports.clientId, input.clientId))
+        .returning();
+      const row = updated[0];
+      if (!row) {
+        throw new Error("The report update did not return a row");
+      }
+      return { status: "existing", report: toRecord(row) };
     },
 
-    async find(clientId: string): Promise<StoredServiceReport | null> {
+    async find(
+      clientId: string,
+      userId: string,
+    ): Promise<StoredServiceReport | null> {
       const row = await findRow(db, clientId);
-      return row ? toRecord(row) : null;
+      if (!row || row.userId !== userId) return null;
+      return toRecord(row);
     },
 
-    async list(): Promise<StoredServiceReport[]> {
+    async list(userId: string): Promise<StoredServiceReport[]> {
       const rows = await db
         .select()
         .from(serviceReports)
+        .where(eq(serviceReports.userId, userId))
         .orderBy(desc(serviceReports.createdAt));
       return rows.map(toRecord);
     },
@@ -80,15 +121,12 @@ async function findRow(
   return rows[0];
 }
 
-function toIdentity(row: ReportRow): {
-  description: string;
-  technicianLabel: string | null;
-  createdAt: string;
-} {
+function toIdentity(row: ReportRow) {
   return {
     description: row.description,
-    technicianLabel: row.technicianLabel,
     createdAt: row.createdAt.toISOString(),
+    latitude: row.latitude,
+    longitude: row.longitude,
   };
 }
 
@@ -98,6 +136,8 @@ function toRecord(row: ReportRow): StoredServiceReport {
     remoteId: row.id,
     description: row.description,
     technicianLabel: row.technicianLabel,
+    latitude: row.latitude,
+    longitude: row.longitude,
     createdAt: row.createdAt.toISOString(),
   };
 }

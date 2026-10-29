@@ -1,5 +1,6 @@
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { createAccountRepository } from "./auth/repository.js";
 import { createDatabase } from "./db/client.js";
 import { createReportRepository } from "./reports/repository.js";
 import { loadEnv } from "./config/env.js";
@@ -26,8 +27,13 @@ const app = await buildApp({
     level: env.LOG_LEVEL,
   },
   ...(database
-    ? { database, reports: createReportRepository(database.db) }
+    ? {
+        database,
+        reports: createReportRepository(database.db),
+        accounts: createAccountRepository(database.db),
+      }
     : {}),
+  production: env.NODE_ENV === "production",
   ...(env.CORS_ORIGIN ? { corsOrigin: env.CORS_ORIGIN } : {}),
   ...(webRoot ? { webRoot } : {}),
 });

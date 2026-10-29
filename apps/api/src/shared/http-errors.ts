@@ -28,6 +28,15 @@ export function toErrorBody(
     };
   }
 
+  if (statusCode === 401) {
+    return {
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      },
+    };
+  }
+
   if (statusCode === 404) {
     return {
       error: {
@@ -41,7 +50,7 @@ export function toErrorBody(
     return {
       error: {
         code: "CONFLICT",
-        message: "The report already exists with different content",
+        message: message ?? "The report already exists with different content",
       },
     };
   }

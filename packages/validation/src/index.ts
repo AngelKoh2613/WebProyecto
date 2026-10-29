@@ -26,6 +26,31 @@ export const apiErrorBodySchema = z.object({
   }),
 });
 
+const emailSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3)
+  .max(254)
+  .regex(/^[^\s@]+@[^\s@]+\.[^\s@]+$/);
+
+export const registerAccountSchema = z.object({
+  name: z.string().trim().min(1).max(80),
+  email: emailSchema,
+  password: z.string().min(8).max(72),
+});
+
+export const loginAccountSchema = z.object({
+  email: emailSchema,
+  password: z.string().min(1).max(72),
+});
+
+export const accountProfileSchema = z.object({
+  id: z.uuid(),
+  name: z.string().min(1).max(80),
+  email: emailSchema,
+});
+
 export const createServiceReportSchema = z.object({
   clientId: z.uuid(),
   description: z.string().trim().min(1).max(2000),
@@ -36,6 +61,8 @@ export const createServiceReportSchema = z.object({
     .nullable()
     .optional()
     .transform((value) => (value ? value : null)),
+  latitude: z.number().gte(-90).lte(90),
+  longitude: z.number().gte(-180).lte(180),
   createdAt: z.iso.datetime(),
 });
 
@@ -44,6 +71,8 @@ export const serviceReportRecordSchema = z.object({
   remoteId: z.uuid(),
   description: z.string().min(1).max(2000),
   technicianLabel: z.string().min(1).max(80).nullable(),
+  latitude: z.number().gte(-90).lte(90).nullable(),
+  longitude: z.number().gte(-180).lte(180).nullable(),
   createdAt: z.iso.datetime(),
 });
 

@@ -13,7 +13,17 @@ import {
 import type { FieldServiceDatabase as ReportDatabase } from "./db";
 import { syncReportQueue } from "./sync";
 
+const ownerId = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
 const databases: FieldServiceDatabase[] = [];
+
+function located(input: { description: string; createdAt?: string }) {
+  return {
+    ...input,
+    latitude: 19.4326,
+    longitude: -99.1332,
+    userId: ownerId,
+  };
+}
 
 function openDatabase(): FieldServiceDatabase {
   const db = new FieldServiceDatabase(`field-service-${crypto.randomUUID()}`);
@@ -37,7 +47,7 @@ describe("local reports", () => {
     } as unknown as ReportDatabase;
 
     await expect(
-      createLocalReport(db, { description: "Sin espacio" }, "pending"),
+      createLocalReport(db, located({ description: "Sin espacio" }), "pending"),
     ).rejects.toMatchObject({
       name: "LocalStorageError",
       message: "No hay espacio suficiente para guardar el reporte.",
@@ -50,7 +60,7 @@ describe("local reports", () => {
     const first = new FieldServiceDatabase(name);
     const created = await createLocalReport(
       first,
-      { description: "La bomba no arranca" },
+      located({ description: "La bomba no arranca" }),
       "pending",
     );
     first.close();
@@ -68,7 +78,7 @@ describe("local reports", () => {
     const db = openDatabase();
     const created = await createLocalReport(
       db,
-      { description: "Cable cortado" },
+      located({ description: "Cable cortado" }),
       "pending",
     );
 
@@ -93,7 +103,7 @@ describe("local reports", () => {
     const db = openDatabase();
     const created = await createLocalReport(
       db,
-      { description: "Sin señal" },
+      located({ description: "Sin señal" }),
       "pending",
     );
 
@@ -117,7 +127,7 @@ describe("local reports", () => {
     const db = openDatabase();
     const draft = await createLocalReport(
       db,
-      { description: "Borrador inicial" },
+      located({ description: "Borrador inicial" }),
       "draft",
     );
 
@@ -128,7 +138,7 @@ describe("local reports", () => {
 
     const queued = await createLocalReport(
       db,
-      { description: "Ya enviado" },
+      located({ description: "Ya enviado" }),
       "pending",
     );
     await syncReportQueue(
@@ -153,12 +163,18 @@ describe("local reports", () => {
     const db = openDatabase();
     const first = await createLocalReport(
       db,
-      { description: "Falla primero", createdAt: "2026-10-27T12:00:00.000Z" },
+      located({
+        description: "Falla primero",
+        createdAt: "2026-10-27T12:00:00.000Z",
+      }),
       "pending",
     );
     const second = await createLocalReport(
       db,
-      { description: "Pasa después", createdAt: "2026-10-27T12:05:00.000Z" },
+      located({
+        description: "Pasa después",
+        createdAt: "2026-10-27T12:05:00.000Z",
+      }),
       "pending",
     );
 
@@ -185,7 +201,7 @@ describe("local reports", () => {
     const db = openDatabase();
     const created = await createLocalReport(
       db,
-      { description: "Respuesta perdida" },
+      located({ description: "Respuesta perdida" }),
       "pending",
     );
     const remoteId = crypto.randomUUID();
@@ -230,7 +246,7 @@ describe("local reports", () => {
     const db = openDatabase();
     const pending = await createLocalReport(
       db,
-      { description: "Sigue solo en este teléfono" },
+      located({ description: "Sigue solo en este teléfono" }),
       "pending",
     );
 
@@ -242,6 +258,8 @@ describe("local reports", () => {
           remoteId: "22222222-2222-4222-8222-222222222222",
           description: "No debe pisar el pendiente",
           technicianLabel: null,
+          latitude: 19.4,
+          longitude: -99.1,
           createdAt: pending.createdAt,
         },
         {
@@ -249,10 +267,13 @@ describe("local reports", () => {
           remoteId: "44444444-4444-4444-8444-444444444444",
           description: "Llegó desde otro dispositivo",
           technicianLabel: null,
+          latitude: 19.5,
+          longitude: -99.2,
           createdAt: "2026-10-28T12:00:00.000Z",
         },
       ],
       "2026-10-29T06:00:00.000Z",
+      ownerId,
     );
 
     const localPending = await getLocalReport(db, pending.clientId);

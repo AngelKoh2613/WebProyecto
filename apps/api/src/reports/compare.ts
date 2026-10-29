@@ -1,7 +1,8 @@
 export interface ReportIdentity {
   description: string;
-  technicianLabel: string | null;
   createdAt: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
 export function sameStoredReport(
@@ -10,7 +11,17 @@ export function sameStoredReport(
 ): boolean {
   return (
     stored.description === incoming.description &&
-    stored.technicianLabel === incoming.technicianLabel &&
-    Date.parse(stored.createdAt) === Date.parse(incoming.createdAt)
+    Date.parse(stored.createdAt) === Date.parse(incoming.createdAt) &&
+    sameCoordinate(stored.latitude, incoming.latitude) &&
+    sameCoordinate(stored.longitude, incoming.longitude)
   );
+}
+
+function sameCoordinate(
+  stored: number | null,
+  incoming: number | null,
+): boolean {
+  if (stored === null) return true;
+  if (incoming === null) return false;
+  return Math.abs(stored - incoming) < 0.000001;
 }

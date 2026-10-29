@@ -17,6 +17,9 @@ export class DraftOnlyError extends Error {
 
 export interface NewLocalReport {
   description: string;
+  latitude: number;
+  longitude: number;
+  userId: string;
   technicianLabel?: string | null;
   createdAt?: string;
   clientId?: string;
@@ -32,6 +35,8 @@ export async function createLocalReport(
     clientId: input.clientId ?? crypto.randomUUID(),
     description: input.description,
     technicianLabel: input.technicianLabel ?? null,
+    latitude: input.latitude,
+    longitude: input.longitude,
     createdAt: input.createdAt ?? now,
   });
   if (!parsed.success) {
@@ -40,8 +45,11 @@ export async function createLocalReport(
 
   const report: LocalReport = {
     clientId: parsed.data.clientId,
+    userId: input.userId,
     description: parsed.data.description,
     technicianLabel: parsed.data.technicianLabel,
+    latitude: parsed.data.latitude,
+    longitude: parsed.data.longitude,
     createdAt: parsed.data.createdAt,
     updatedAt: now,
     syncStatus,
@@ -83,7 +91,9 @@ export async function updateDraft(
   const parsed = createServiceReportSchema.safeParse({
     clientId,
     description: input.description,
-    technicianLabel: input.technicianLabel ?? null,
+    technicianLabel: input.technicianLabel ?? current.technicianLabel,
+    latitude: current.latitude,
+    longitude: current.longitude,
     createdAt: current.createdAt,
   });
   if (!parsed.success) {
@@ -157,9 +167,12 @@ export async function importSyncedReports(
     remoteId: string;
     description: string;
     technicianLabel: string | null;
+    latitude: number | null;
+    longitude: number | null;
     createdAt: string;
   }>,
   syncedAt: string,
+  userId: string,
 ): Promise<void> {
   await guard(() =>
     db.transaction("rw", db.reports, async () => {
@@ -168,8 +181,11 @@ export async function importSyncedReports(
         if (!current) {
           await db.reports.add({
             clientId: row.clientId,
+            userId,
             description: row.description,
             technicianLabel: row.technicianLabel,
+            latitude: row.latitude,
+            longitude: row.longitude,
             createdAt: row.createdAt,
             updatedAt: syncedAt,
             syncStatus: "synced",
@@ -183,8 +199,11 @@ export async function importSyncedReports(
         }
         if (current.syncStatus !== "synced") continue;
         await db.reports.update(row.clientId, {
+          userId,
           description: row.description,
           technicianLabel: row.technicianLabel,
+          latitude: row.latitude,
+          longitude: row.longitude,
           remoteId: row.remoteId,
           createdAt: row.createdAt,
           syncedAt,
@@ -192,6 +211,15 @@ export async function importSyncedReports(
         });
       }
     }),
+  );
+}
+
+export async function claimUnassignedReports(
+  db: FieldServiceDatabase,
+  userId: string,
+): Promise<void> {
+  await guard(() =>
+    db.reports.filter((report) => !report.userId).modify({ userId }),
   );
 }
 

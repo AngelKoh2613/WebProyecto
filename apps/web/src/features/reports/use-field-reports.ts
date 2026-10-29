@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiBaseUrl } from "../../app/api-status";
 import { fieldServiceDatabase } from "./db";
-import type { LocalReport, LocalSyncStatus } from "./db";
+import type { LocalAccount, LocalReport, LocalSyncStatus } from "./db";
 import {
   LocalStorageError,
   createLocalReport,
@@ -14,19 +14,26 @@ import {
   syncReportQueue,
 } from "./sync";
 
-export function useFieldReports(serverReachable: boolean) {
+export function useFieldReports(
+  serverReachable: boolean,
+  account: Pick<LocalAccount, "userId" | "name"> | null,
+) {
   const [reports, setReports] = useState<LocalReport[]>([]);
   const [storageError, setStorageError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    setReports(await listLocalReports(fieldServiceDatabase()));
-  }, []);
+    const rows = await listLocalReports(fieldServiceDatabase());
+    setReports(
+      account ? rows.filter((row) => row.userId === account.userId) : [],
+    );
+  }, [account]);
 
   const runSync = useCallback(
     async (manual = false) => {
       const online = navigator.onLine;
+      if (!account) return;
       if (!online) {
         if (manual) {
           setNotice("Sin conexión. Los reportes siguen en este dispositivo.");
@@ -45,7 +52,12 @@ export function useFieldReports(serverReachable: boolean) {
           { now: Date.parse(now), online: true, manual },
         );
         try {
-          await pullRemoteReports(fieldServiceDatabase(), apiBaseUrl, now);
+          await pullRemoteReports(
+            fieldServiceDatabase(),
+            apiBaseUrl,
+            now,
+            account.userId,
+          );
         } catch (error) {
           setNotice(
             error instanceof Error
@@ -64,7 +76,7 @@ export function useFieldReports(serverReachable: boolean) {
         await refresh().catch(() => undefined);
       }
     },
-    [refresh, serverReachable],
+    [account, refresh, serverReachable],
   );
 
   useEffect(() => {
@@ -118,12 +130,22 @@ export function useFieldReports(serverReachable: boolean) {
 
   async function save(
     description: string,
-    technicianLabel: string,
+    latitude: number,
+    longitude: number,
     syncStatus: Extract<LocalSyncStatus, "draft" | "pending">,
   ): Promise<void> {
+    if (!account) {
+      throw new Error("Entra con una cuenta para guardar el reporte.");
+    }
     await createLocalReport(
       fieldServiceDatabase(),
-      { description, technicianLabel },
+      {
+        description,
+        latitude,
+        longitude,
+        userId: account.userId,
+        technicianLabel: account.name,
+      },
       syncStatus,
     );
     setNotice("El reporte quedó guardado en este dispositivo.");

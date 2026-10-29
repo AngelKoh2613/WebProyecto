@@ -21,6 +21,7 @@ export type SendResult =
   | { status: "synced"; remoteId: string }
   | { status: "conflict" }
   | { status: "rejected" }
+  | { status: "unauthorized" }
   | { status: "retryable" };
 
 export interface ReportSender {
@@ -108,6 +109,9 @@ function errorText(status: Exclude<SendResult["status"], "synced">): string {
   if (status === "conflict") {
     return "Este identificador ya existe en el servidor con otro contenido. El reporte sigue en este dispositivo.";
   }
+  if (status === "unauthorized") {
+    return "La sesión terminó. Entra de nuevo para enviar este reporte. Sigue guardado en este dispositivo.";
+  }
   if (status === "rejected") {
     return "El servidor rechazó el reporte. Sigue guardado en este dispositivo.";
   }
@@ -118,10 +122,24 @@ export async function pullRemoteReports(
   db: FieldServiceDatabase,
   baseUrl: string,
   syncedAt: string,
+  userId: string,
 ): Promise<void> {
-  const response = await fetch(`${baseUrl}/api/v1/reports`, {
-    cache: "no-store",
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${baseUrl}/api/v1/reports`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error(
+      "No se pudieron traer los reportes guardados en el servidor.",
+    );
+  }
+  if (response.status === 401) {
+    throw new Error(
+      "La sesión terminó. Entra de nuevo para traer los reportes del servidor.",
+    );
+  }
   if (!response.ok) {
     throw new Error(
       "No se pudieron traer los reportes guardados en el servidor.",
@@ -133,12 +151,15 @@ export async function pullRemoteReports(
       "No se pudieron traer los reportes guardados en el servidor.",
     );
   }
-  await importSyncedReports(db, parsed.data.reports, syncedAt);
+  await importSyncedReports(db, parsed.data.reports, syncedAt, userId);
 }
 
 export function createHttpReportSender(baseUrl: string): ReportSender {
   return {
     async send(report) {
+      if (report.latitude === null || report.longitude === null) {
+        return { status: "rejected" };
+      }
       try {
         const response = await fetch(`${baseUrl}/api/v1/reports`, {
           method: "POST",
@@ -148,8 +169,11 @@ export function createHttpReportSender(baseUrl: string): ReportSender {
             clientId: report.clientId,
             description: report.description,
             technicianLabel: report.technicianLabel,
+            latitude: report.latitude,
+            longitude: report.longitude,
             createdAt: report.createdAt,
           }),
+          credentials: "include",
         });
         if (response.status === 200 || response.status === 201) {
           const body = serviceReportSyncResponseSchema.parse(
@@ -158,6 +182,7 @@ export function createHttpReportSender(baseUrl: string): ReportSender {
           return { status: "synced", remoteId: body.remoteId };
         }
         if (response.status === 409) return { status: "conflict" };
+        if (response.status === 401) return { status: "unauthorized" };
         if (isRetryableHttpStatus(response.status))
           return { status: "retryable" };
         return { status: "rejected" };
